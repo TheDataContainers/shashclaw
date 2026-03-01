@@ -215,6 +215,18 @@ railway up
 
 ## Custom Authentication
 
+### Built-in Custom Authentication
+
+Shashclaw includes a production-ready custom authentication system in `server/customAuth.ts` and `client/src/pages/CustomLogin.tsx`. This system:
+
+- Provides email-based login with token verification
+- Works independently of Manus OAuth
+- Includes a demo account endpoint for testing
+- Uses JWT session tokens for authentication
+- Supports user creation and profile management
+
+The built-in system is suitable for production use and can be extended with email verification, password authentication, or external OAuth providers.
+
 ### Replace Manus OAuth with Custom Auth
 
 Create `server/_core/providers/auth-custom.ts`:

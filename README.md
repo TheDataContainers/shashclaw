@@ -22,7 +22,7 @@ Shashclaw enables you to:
 - **Backend:** Express 4 + tRPC 11 + Drizzle ORM
 - **Database:** MySQL/TiDB
 - **Storage:** AWS S3
-- **Authentication:** Manus OAuth
+- **Authentication:** Custom email-based auth + Manus OAuth (optional)
 - **LLM Integration:** Built-in Forge API (supports OpenAI, Anthropic, etc.)
 
 **Key Components:**
@@ -86,6 +86,45 @@ Shashclaw enables you to:
    ```bash
    pnpm test
    ```
+
+## Authentication
+
+Shashclaw includes a **custom authentication system** that works independently of Manus OAuth, making it suitable for deployment outside the Manus platform.
+
+### Custom Email-Based Authentication
+
+The default authentication method uses email-based login with token verification:
+
+**Login Flow:**
+1. User enters email at `/login`
+2. System generates a temporary authentication token
+3. User receives token (in demo mode, shown in UI; in production, sent via email)
+4. User verifies token to create a session
+5. User is logged in and can access the dashboard
+
+**API Endpoints:**
+- `POST /api/auth/login` — Request login token
+  ```json
+  { "email": "user@example.com" }
+  ```
+- `POST /api/auth/verify-token` — Verify token and create session
+  ```json
+  { "tempToken": "...", "email": "user@example.com", "name": "User Name" }
+  ```
+- `GET /api/auth/demo-login` — Quick demo account login (for testing)
+
+### Extending Authentication
+
+The authentication system is designed to be extensible. See [EXTENSIBILITY.md](./EXTENSIBILITY.md#custom-authentication) for details on:
+- Adding email verification (magic links)
+- Implementing password-based authentication
+- Integrating with LDAP/Active Directory
+- Adding OAuth2 providers (GitHub, Google, etc.)
+- Supporting SAML
+
+### Manus OAuth (Optional)
+
+If deployed on the Manus platform, the standard Manus OAuth flow is still available at `/api/oauth/callback`. The custom auth and Manus OAuth can coexist.
 
 ## Project Structure
 
