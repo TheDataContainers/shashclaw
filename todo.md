@@ -22,3 +22,13 @@
 - [x] Custom authentication handler to bypass Manus OAuth redirect URI validation
 - [x] Custom login page with email-based authentication
 - [x] Demo account login for testing
+- [x] Add LLM configuration backend routers with encryption
+- [x] Add service integration backend routers with secure credential storage
+- [x] Implement API key encryption/decryption utilities (AES-256-GCM)
+- [x] Build Integrations UI page with full CRUD functionality
+- [x] Build Configuration UI page with LLM provider setup
+- [x] Add input validation and sanitization for all integration inputs
+- [x] Implement audit logging for all integration actions
+- [ ] Add rate limiting for integration API calls
+- [ ] Write security tests for credential handling
+- [ ] Document security best practices in SECURITY.md

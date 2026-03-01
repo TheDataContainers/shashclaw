@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, json } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, json, decimal } from "drizzle-orm/mysql-core";
 
 // ── Users ──────────────────────────────────────────────────────────────
 export const users = mysqlTable("users", {
@@ -156,3 +156,46 @@ export const integrations = mysqlTable("integrations", {
 
 export type Integration = typeof integrations.$inferSelect;
 export type InsertIntegration = typeof integrations.$inferInsert;
+
+// ── LLM Configurations ─────────────────────────────────────────────────
+export const llmConfigs = mysqlTable("llm_configs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  agentId: int("agentId"),
+  name: varchar("name", { length: 255 }).notNull(),
+  provider: mysqlEnum("provider", ["openai", "anthropic", "custom", "manus"]).notNull(),
+  model: varchar("model", { length: 255 }).notNull(),
+  apiKey: text("apiKey"),
+  apiUrl: text("apiUrl"),
+  temperature: decimal("temperature", { precision: 3, scale: 2 }).default("0.7"),
+  maxTokens: int("maxTokens").default(2048),
+  topP: decimal("topP", { precision: 3, scale: 2 }).default("1.0"),
+  isDefault: boolean("isDefault").default(false),
+  status: mysqlEnum("status", ["active", "inactive", "error"]).default("active").notNull(),
+  lastTestedAt: timestamp("lastTestedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type LLMConfig = typeof llmConfigs.$inferSelect;
+export type InsertLLMConfig = typeof llmConfigs.$inferInsert;
+
+// ── Service Integrations ───────────────────────────────────────────────
+export const serviceIntegrations = mysqlTable("service_integrations", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  agentId: int("agentId"),
+  name: varchar("name", { length: 255 }).notNull(),
+  service: mysqlEnum("service", ["slack", "discord", "github", "webhook", "custom"]).notNull(),
+  webhookUrl: text("webhookUrl"),
+  apiKey: text("apiKey"),
+  config: json("config"),
+  enabled: boolean("enabled").default(true),
+  status: mysqlEnum("status", ["active", "inactive", "error"]).default("active").notNull(),
+  lastTestedAt: timestamp("lastTestedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ServiceIntegration = typeof serviceIntegrations.$inferSelect;
+export type InsertServiceIntegration = typeof serviceIntegrations.$inferInsert;

@@ -17,6 +17,10 @@ import {
   getIntegrations, createIntegration, updateIntegration, deleteIntegration,
   getDashboardStats,
 } from "./db";
+import {
+  createLLMConfig, getLLMConfig, listLLMConfigs, updateLLMConfig, deleteLLMConfig, testLLMConfig,
+  createServiceIntegration, getServiceIntegration, listServiceIntegrations, updateServiceIntegration, deleteServiceIntegration, testServiceIntegration,
+} from "./integrations";
 import { nanoid } from "nanoid";
 
 // ── Agent Router ───────────────────────────────────────────────────────
@@ -375,6 +379,182 @@ const integrationRouter = router({
     }),
 });
 
+// ── LLM Configuration Router ───────────────────────────────────────────
+const llmRouter = router({
+  list: protectedProcedure.query(({ ctx }) => listLLMConfigs(ctx.user.id)),
+
+  getById: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input, ctx }) => {
+      return getLLMConfig(input.id, ctx.user.id);
+    }),
+
+  create: protectedProcedure
+    .input(z.object({
+      name: z.string().min(1).max(255),
+      provider: z.enum(["openai", "anthropic", "custom", "manus"]),
+      model: z.string().min(1).max(255),
+      apiKey: z.string().optional(),
+      apiUrl: z.string().url().optional(),
+      temperature: z.number().min(0).max(2).optional(),
+      maxTokens: z.number().min(1).optional(),
+      topP: z.number().min(0).max(1).optional(),
+      isDefault: z.boolean().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const createData: any = { ...input, userId: ctx.user.id };
+      if (input.temperature !== undefined) {
+        createData.temperature = input.temperature.toString();
+      }
+      if (input.topP !== undefined) {
+        createData.topP = input.topP.toString();
+      }
+      const result = await createLLMConfig(createData);
+      await createAuditLog({
+        userId: ctx.user.id,
+        action: "llm.created",
+        category: "system",
+        severity: "info",
+        details: { name: input.name, provider: input.provider },
+      });
+      return result;
+    }),
+
+  update: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      model: z.string().optional(),
+      apiKey: z.string().optional(),
+      apiUrl: z.string().url().optional(),
+      temperature: z.number().optional(),
+      maxTokens: z.number().optional(),
+      topP: z.number().optional(),
+      isDefault: z.boolean().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { id, ...updates } = input;
+      const updateData: any = updates;
+      if (updates.temperature !== undefined) {
+        updateData.temperature = updates.temperature.toString();
+      }
+      if (updates.topP !== undefined) {
+        updateData.topP = updates.topP.toString();
+      }
+      const result = await updateLLMConfig(id, ctx.user.id, updateData);
+      if (result) {
+        await createAuditLog({
+          userId: ctx.user.id,
+          action: "llm.updated",
+          category: "system",
+          severity: "info",
+          details: { id },
+        });
+      }
+      return result;
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const success = await deleteLLMConfig(input.id, ctx.user.id);
+      if (success) {
+        await createAuditLog({
+          userId: ctx.user.id,
+          action: "llm.deleted",
+          category: "system",
+          severity: "info",
+          details: { id: input.id },
+        });
+      }
+      return success;
+    }),
+
+  test: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      return testLLMConfig(input.id, ctx.user.id);
+    }),
+});
+
+// ── Service Integration Router ─────────────────────────────────────────
+const serviceRouter = router({
+  list: protectedProcedure.query(({ ctx }) => listServiceIntegrations(ctx.user.id)),
+
+  getById: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input, ctx }) => {
+      return getServiceIntegration(input.id, ctx.user.id);
+    }),
+
+  create: protectedProcedure
+    .input(z.object({
+      name: z.string().min(1).max(255),
+      service: z.enum(["slack", "discord", "github", "webhook", "custom"]),
+      webhookUrl: z.string().url().optional(),
+      apiKey: z.string().optional(),
+      config: z.any().optional(),
+      enabled: z.boolean().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await createServiceIntegration({ ...input, userId: ctx.user.id });
+      await createAuditLog({
+        userId: ctx.user.id,
+        action: "service.created",
+        category: "system",
+        severity: "info",
+        details: { name: input.name, service: input.service },
+      });
+      return result;
+    }),
+
+  update: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      webhookUrl: z.string().url().optional(),
+      apiKey: z.string().optional(),
+      config: z.any().optional(),
+      enabled: z.boolean().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { id, ...updates } = input;
+      const result = await updateServiceIntegration(id, ctx.user.id, updates);
+      if (result) {
+        await createAuditLog({
+          userId: ctx.user.id,
+          action: "service.updated",
+          category: "system",
+          severity: "info",
+          details: { id },
+        });
+      }
+      return result;
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const success = await deleteServiceIntegration(input.id, ctx.user.id);
+      if (success) {
+        await createAuditLog({
+          userId: ctx.user.id,
+          action: "service.deleted",
+          category: "system",
+          severity: "info",
+          details: { id: input.id },
+        });
+      }
+      return success;
+    }),
+
+  test: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      return testServiceIntegration(input.id, ctx.user.id);
+    }),
+});
+
 // ── Dashboard Router ───────────────────────────────────────────────────
 const dashboardRouter = router({
   stats: protectedProcedure.query(({ ctx }) => getDashboardStats(ctx.user.id)),
@@ -399,6 +579,8 @@ export const appRouter = router({
   file: fileRouter,
   integration: integrationRouter,
   dashboard: dashboardRouter,
+  llm: llmRouter,
+  service: serviceRouter,
 });
 
 export type AppRouter = typeof appRouter;
