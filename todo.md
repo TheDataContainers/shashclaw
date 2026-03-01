@@ -1,0 +1,21 @@
+# Shashclaw TODO
+
+- [x] Database schema: agents, skills, audit_logs, scheduled_tasks, messages, agent_files, integrations
+- [x] Server routers: agents CRUD, skills management, audit logs, scheduled tasks, messages, files, integrations
+- [x] Container-isolated agent execution environment with explicit directory mounting
+- [x] Agent skill/tool management system with sandboxed execution and permission controls
+- [x] Real-time agent activity monitoring dashboard with audit logs
+- [x] Multi-agent support with per-agent isolated workspaces and memory persistence
+- [x] Chat interface with message history and streaming responses
+- [x] Scheduled task system for automated jobs at specified intervals
+- [x] OAuth-based authentication for external service integrations with scoped permissions
+- [x] Agent configuration panel for LLM providers, API keys, and tool permissions
+- [x] Skill marketplace/registry for installing pre-built capabilities with security vetting
+- [x] WebSocket-based real-time updates for agent status and execution progress
+- [x] LLM provider integration (OpenAI, Anthropic, etc.)
+- [x] S3 storage for agent files, logs, and artifacts with per-agent isolation
+- [x] Owner notifications for critical tasks, errors, and human approval requests
+- [x] Dashboard layout with sidebar navigation
+- [x] Dark theme enterprise design
+- [x] Landing/Home page
+- [x] Vitest tests for all routers (34 tests passing)

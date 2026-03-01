@@ -1,28 +1,404 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
+import { invokeLLM } from "./_core/llm";
+import { notifyOwner } from "./_core/notification";
+import { storagePut } from "./storage";
+import { z } from "zod";
+import {
+  createAgent, getAgentsByUser, getAgentById, updateAgent, deleteAgent,
+  getAllSkills, getSkillById, createSkill, updateSkill,
+  getAgentSkills, installSkillToAgent, uninstallSkillFromAgent,
+  getMessagesByAgent, createMessage,
+  getAuditLogs, createAuditLog,
+  getScheduledTasks, getScheduledTaskById, createScheduledTask, updateScheduledTask, deleteScheduledTask,
+  getAgentFiles, createAgentFile, deleteAgentFile,
+  getIntegrations, createIntegration, updateIntegration, deleteIntegration,
+  getDashboardStats,
+} from "./db";
+import { nanoid } from "nanoid";
 
+// ── Agent Router ───────────────────────────────────────────────────────
+const agentRouter = router({
+  list: protectedProcedure.query(({ ctx }) => getAgentsByUser(ctx.user.id)),
+
+  getById: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const agent = await getAgentById(input.id);
+      if (!agent || agent.userId !== ctx.user.id) return null;
+      return agent;
+    }),
+
+  create: protectedProcedure
+    .input(z.object({
+      name: z.string().min(1).max(255),
+      description: z.string().optional(),
+      systemPrompt: z.string().optional(),
+      llmProvider: z.string().optional(),
+      mountedDirs: z.any().optional(),
+      permissions: z.any().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await createAgent({ ...input, userId: ctx.user.id });
+      await createAuditLog({
+        agentId: result.id, userId: ctx.user.id, action: "agent.created",
+        category: "agent", severity: "info", details: { name: input.name },
+      });
+      return result;
+    }),
+
+  update: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().min(1).max(255).optional(),
+      description: z.string().optional(),
+      status: z.enum(["idle", "running", "error", "stopped"]).optional(),
+      systemPrompt: z.string().optional(),
+      llmProvider: z.string().optional(),
+      mountedDirs: z.any().optional(),
+      permissions: z.any().optional(),
+      config: z.any().optional(),
+      memoryEnabled: z.boolean().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const agent = await getAgentById(input.id);
+      if (!agent || agent.userId !== ctx.user.id) throw new Error("Agent not found");
+      const { id, ...data } = input;
+      await updateAgent(id, data);
+      await createAuditLog({
+        agentId: id, userId: ctx.user.id, action: "agent.updated",
+        category: "agent", severity: "info", details: data,
+      });
+      if (input.status === "error") {
+        await notifyOwner({ title: `Agent "${agent.name}" Error`, content: `Agent "${agent.name}" has entered an error state.` });
+      }
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const agent = await getAgentById(input.id);
+      if (!agent || agent.userId !== ctx.user.id) throw new Error("Agent not found");
+      await deleteAgent(input.id);
+      await createAuditLog({
+        agentId: input.id, userId: ctx.user.id, action: "agent.deleted",
+        category: "agent", severity: "warning", details: { name: agent.name },
+      });
+    }),
+
+  start: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const agent = await getAgentById(input.id);
+      if (!agent || agent.userId !== ctx.user.id) throw new Error("Agent not found");
+      await updateAgent(input.id, { status: "running" });
+      await createAuditLog({
+        agentId: input.id, userId: ctx.user.id, action: "agent.started",
+        category: "agent", severity: "info", details: { name: agent.name },
+      });
+      return { success: true };
+    }),
+
+  stop: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const agent = await getAgentById(input.id);
+      if (!agent || agent.userId !== ctx.user.id) throw new Error("Agent not found");
+      await updateAgent(input.id, { status: "stopped" });
+      await createAuditLog({
+        agentId: input.id, userId: ctx.user.id, action: "agent.stopped",
+        category: "agent", severity: "info", details: { name: agent.name },
+      });
+      return { success: true };
+    }),
+});
+
+// ── Skill Router ───────────────────────────────────────────────────────
+const skillRouter = router({
+  list: protectedProcedure.query(() => getAllSkills()),
+
+  getById: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(({ input }) => getSkillById(input.id)),
+
+  create: adminProcedure
+    .input(z.object({
+      name: z.string().min(1).max(255),
+      slug: z.string().min(1).max(255),
+      description: z.string().optional(),
+      version: z.string().optional(),
+      author: z.string().optional(),
+      category: z.string().optional(),
+      isBuiltIn: z.boolean().optional(),
+      isVerified: z.boolean().optional(),
+      permissions: z.any().optional(),
+      config: z.any().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await createSkill(input);
+      await createAuditLog({
+        userId: ctx.user.id, action: "skill.created",
+        category: "skill", severity: "info", details: { name: input.name },
+      });
+      return result;
+    }),
+
+  agentSkills: protectedProcedure
+    .input(z.object({ agentId: z.number() }))
+    .query(({ input }) => getAgentSkills(input.agentId)),
+
+  install: protectedProcedure
+    .input(z.object({ agentId: z.number(), skillId: z.number(), grantedPermissions: z.any().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      await installSkillToAgent(input);
+      await createAuditLog({
+        agentId: input.agentId, userId: ctx.user.id, action: "skill.installed",
+        category: "skill", severity: "info", details: { skillId: input.skillId },
+      });
+    }),
+
+  uninstall: protectedProcedure
+    .input(z.object({ agentId: z.number(), skillId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      await uninstallSkillFromAgent(input.agentId, input.skillId);
+      await createAuditLog({
+        agentId: input.agentId, userId: ctx.user.id, action: "skill.uninstalled",
+        category: "skill", severity: "info", details: { skillId: input.skillId },
+      });
+    }),
+});
+
+// ── Chat Router ────────────────────────────────────────────────────────
+const chatRouter = router({
+  history: protectedProcedure
+    .input(z.object({ agentId: z.number(), limit: z.number().optional() }))
+    .query(({ input }) => getMessagesByAgent(input.agentId, input.limit)),
+
+  send: protectedProcedure
+    .input(z.object({ agentId: z.number(), content: z.string().min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      const agent = await getAgentById(input.agentId);
+      if (!agent || agent.userId !== ctx.user.id) throw new Error("Agent not found");
+
+      // Save user message
+      await createMessage({ agentId: input.agentId, userId: ctx.user.id, role: "user", content: input.content });
+
+      // Get recent history for context
+      const history = await getMessagesByAgent(input.agentId, 20);
+      const sortedHistory = history.reverse();
+
+      const llmMessages = [
+        { role: "system" as const, content: agent.systemPrompt || "You are a helpful AI agent named " + agent.name + ". You run inside a secure, containerized environment. Be concise and helpful." },
+        ...sortedHistory.map(m => ({ role: m.role as "user" | "assistant" | "system", content: m.content })),
+        { role: "user" as const, content: input.content },
+      ];
+
+      try {
+        const response = await invokeLLM({ messages: llmMessages });
+        const assistantContent = typeof response.choices[0]?.message?.content === "string"
+          ? response.choices[0].message.content
+          : JSON.stringify(response.choices[0]?.message?.content ?? "");
+
+        await createMessage({ agentId: input.agentId, userId: ctx.user.id, role: "assistant", content: assistantContent });
+
+        await createAuditLog({
+          agentId: input.agentId, userId: ctx.user.id, action: "chat.message",
+          category: "agent", severity: "info", details: { tokens: response.usage },
+        });
+
+        return { role: "assistant" as const, content: assistantContent };
+      } catch (error: any) {
+        await createAuditLog({
+          agentId: input.agentId, userId: ctx.user.id, action: "chat.error",
+          category: "agent", severity: "error", details: { error: error.message },
+        });
+        await notifyOwner({ title: `Agent Chat Error`, content: `Agent "${agent.name}" encountered an error: ${error.message}` });
+        throw error;
+      }
+    }),
+});
+
+// ── Audit Router ───────────────────────────────────────────────────────
+const auditRouter = router({
+  list: protectedProcedure
+    .input(z.object({
+      agentId: z.number().optional(),
+      category: z.string().optional(),
+      limit: z.number().optional(),
+    }).optional())
+    .query(({ input }) => getAuditLogs(input)),
+});
+
+// ── Task Router ────────────────────────────────────────────────────────
+const taskRouter = router({
+  list: protectedProcedure.query(({ ctx }) => getScheduledTasks(ctx.user.id)),
+
+  getById: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(({ input }) => getScheduledTaskById(input.id)),
+
+  create: protectedProcedure
+    .input(z.object({
+      agentId: z.number(),
+      name: z.string().min(1).max(255),
+      description: z.string().optional(),
+      cronExpression: z.string().optional(),
+      intervalSeconds: z.number().optional(),
+      taskType: z.enum(["cron", "interval", "once"]),
+      prompt: z.string().optional(),
+      enabled: z.boolean().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await createScheduledTask({ ...input, userId: ctx.user.id });
+      await createAuditLog({
+        agentId: input.agentId, userId: ctx.user.id, action: "task.created",
+        category: "task", severity: "info", details: { name: input.name },
+      });
+      return result;
+    }),
+
+  update: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      description: z.string().optional(),
+      cronExpression: z.string().optional(),
+      intervalSeconds: z.number().optional(),
+      prompt: z.string().optional(),
+      enabled: z.boolean().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { id, ...data } = input;
+      await updateScheduledTask(id, data);
+      await createAuditLog({
+        userId: ctx.user.id, action: "task.updated",
+        category: "task", severity: "info", details: { taskId: id },
+      });
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      await deleteScheduledTask(input.id);
+      await createAuditLog({
+        userId: ctx.user.id, action: "task.deleted",
+        category: "task", severity: "warning", details: { taskId: input.id },
+      });
+    }),
+});
+
+// ── Files Router ───────────────────────────────────────────────────────
+const fileRouter = router({
+  list: protectedProcedure
+    .input(z.object({ agentId: z.number() }))
+    .query(({ input }) => getAgentFiles(input.agentId)),
+
+  upload: protectedProcedure
+    .input(z.object({
+      agentId: z.number(),
+      fileName: z.string(),
+      content: z.string(),
+      mimeType: z.string().optional(),
+      category: z.enum(["artifact", "log", "config", "other"]).optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const fileKey = `agents/${input.agentId}/files/${nanoid()}-${input.fileName}`;
+      const { url } = await storagePut(fileKey, input.content, input.mimeType || "text/plain");
+      const result = await createAgentFile({
+        agentId: input.agentId, userId: ctx.user.id,
+        fileName: input.fileName, fileKey, url,
+        mimeType: input.mimeType, sizeBytes: Buffer.byteLength(input.content),
+        category: input.category || "other",
+      });
+      await createAuditLog({
+        agentId: input.agentId, userId: ctx.user.id, action: "file.uploaded",
+        category: "file", severity: "info", details: { fileName: input.fileName },
+      });
+      return { id: result.id, url };
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      await deleteAgentFile(input.id);
+      await createAuditLog({
+        userId: ctx.user.id, action: "file.deleted",
+        category: "file", severity: "info", details: { fileId: input.id },
+      });
+    }),
+});
+
+// ── Integration Router ─────────────────────────────────────────────────
+const integrationRouter = router({
+  list: protectedProcedure.query(({ ctx }) => getIntegrations(ctx.user.id)),
+
+  create: protectedProcedure
+    .input(z.object({
+      provider: z.string().min(1),
+      label: z.string().optional(),
+      scopes: z.any().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const result = await createIntegration({ ...input, userId: ctx.user.id });
+      await createAuditLog({
+        userId: ctx.user.id, action: "integration.created",
+        category: "auth", severity: "info", details: { provider: input.provider },
+      });
+      return result;
+    }),
+
+  update: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      status: z.enum(["active", "expired", "revoked"]).optional(),
+      scopes: z.any().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { id, ...data } = input;
+      await updateIntegration(id, data);
+      await createAuditLog({
+        userId: ctx.user.id, action: "integration.updated",
+        category: "auth", severity: "info", details: { integrationId: id },
+      });
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      await deleteIntegration(input.id);
+      await createAuditLog({
+        userId: ctx.user.id, action: "integration.revoked",
+        category: "auth", severity: "warning", details: { integrationId: input.id },
+      });
+    }),
+});
+
+// ── Dashboard Router ───────────────────────────────────────────────────
+const dashboardRouter = router({
+  stats: protectedProcedure.query(({ ctx }) => getDashboardStats(ctx.user.id)),
+});
+
+// ── Main Router ────────────────────────────────────────────────────────
 export const appRouter = router({
-    // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return {
-        success: true,
-      } as const;
+      return { success: true } as const;
     }),
   }),
-
-  // TODO: add feature routers here, e.g.
-  // todo: router({
-  //   list: protectedProcedure.query(({ ctx }) =>
-  //     db.getUserTodos(ctx.user.id)
-  //   ),
-  // }),
+  agent: agentRouter,
+  skill: skillRouter,
+  chat: chatRouter,
+  audit: auditRouter,
+  task: taskRouter,
+  file: fileRouter,
+  integration: integrationRouter,
+  dashboard: dashboardRouter,
 });
 
 export type AppRouter = typeof appRouter;
