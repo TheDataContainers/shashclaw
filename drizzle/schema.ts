@@ -199,3 +199,36 @@ export const serviceIntegrations = mysqlTable("service_integrations", {
 
 export type ServiceIntegration = typeof serviceIntegrations.$inferSelect;
 export type InsertServiceIntegration = typeof serviceIntegrations.$inferInsert;
+
+// -- Webhooks --
+export const webhooks = mysqlTable("webhooks", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  url: varchar("url", { length: 2048 }).notNull(),
+  events: json("events").notNull(), // Array of event types
+  secret: varchar("secret", { length: 255 }),
+  isActive: boolean("isActive").default(true).notNull(),
+  retryCount: int("retryCount").default(3).notNull(),
+  retryDelayMs: int("retryDelayMs").default(5000).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Webhook = typeof webhooks.$inferSelect;
+export type InsertWebhook = typeof webhooks.$inferInsert;
+
+// -- Webhook Logs --
+export const webhookLogs = mysqlTable("webhookLogs", {
+  id: int("id").autoincrement().primaryKey(),
+  webhookId: int("webhookId").notNull(),
+  event: varchar("event", { length: 64 }).notNull(),
+  statusCode: int("statusCode"),
+  attempt: int("attempt").default(1).notNull(),
+  success: boolean("success").notNull(),
+  error: text("error"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type WebhookLog = typeof webhookLogs.$inferSelect;
+export type InsertWebhookLog = typeof webhookLogs.$inferInsert;

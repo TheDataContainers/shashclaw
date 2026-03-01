@@ -21,7 +21,11 @@ import {
   createLLMConfig, getLLMConfig, listLLMConfigs, updateLLMConfig, deleteLLMConfig, testLLMConfig,
   createServiceIntegration, getServiceIntegration, listServiceIntegrations, updateServiceIntegration, deleteServiceIntegration, testServiceIntegration,
 } from "./integrations";
+import {
+  createWebhook, getWebhook, listWebhooks, updateWebhook, deleteWebhook, testWebhook, getWebhookLogs,
+} from "./webhooks";
 import { nanoid } from "nanoid";
+import { integrationRateLimiter, llmRateLimiter, webhookRateLimiter } from "./_core/rateLimit";
 
 // ── Agent Router ───────────────────────────────────────────────────────
 const agentRouter = router({
@@ -381,7 +385,13 @@ const integrationRouter = router({
 
 // ── LLM Configuration Router ───────────────────────────────────────────
 const llmRouter = router({
-  list: protectedProcedure.query(({ ctx }) => listLLMConfigs(ctx.user.id)),
+  list: protectedProcedure.query(({ ctx }) => {
+    const rateLimitCheck = llmRateLimiter(`user:${ctx.user.id}:list`);
+    if (!rateLimitCheck.allowed) {
+      throw new Error(`Rate limit exceeded. Retry after ${rateLimitCheck.retryAfter}s`);
+    }
+    return listLLMConfigs(ctx.user.id);
+  }),
 
   getById: protectedProcedure
     .input(z.object({ id: z.number() }))
@@ -473,13 +483,23 @@ const llmRouter = router({
   test: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input, ctx }) => {
+      const rateLimitCheck = llmRateLimiter(`user:${ctx.user.id}:test`);
+      if (!rateLimitCheck.allowed) {
+        throw new Error(`Rate limit exceeded. Retry after ${rateLimitCheck.retryAfter}s`);
+      }
       return testLLMConfig(input.id, ctx.user.id);
     }),
 });
 
 // ── Service Integration Router ─────────────────────────────────────────
 const serviceRouter = router({
-  list: protectedProcedure.query(({ ctx }) => listServiceIntegrations(ctx.user.id)),
+  list: protectedProcedure.query(({ ctx }) => {
+    const rateLimitCheck = integrationRateLimiter(`user:${ctx.user.id}:list`);
+    if (!rateLimitCheck.allowed) {
+      throw new Error(`Rate limit exceeded. Retry after ${rateLimitCheck.retryAfter}s`);
+    }
+    return listServiceIntegrations(ctx.user.id);
+  }),
 
   getById: protectedProcedure
     .input(z.object({ id: z.number() }))
@@ -551,11 +571,83 @@ const serviceRouter = router({
   test: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input, ctx }) => {
+      const rateLimitCheck = integrationRateLimiter(`user:${ctx.user.id}:test`);
+      if (!rateLimitCheck.allowed) {
+        throw new Error(`Rate limit exceeded. Retry after ${rateLimitCheck.retryAfter}s`);
+      }
       return testServiceIntegration(input.id, ctx.user.id);
     }),
 });
 
-// ── Dashboard Router ───────────────────────────────────────────────────
+// ── Webhook Router ────────────────────────────────────────────────────
+const webhookRouter = router({
+  list: protectedProcedure.query(({ ctx }) => {
+    const rateLimitCheck = webhookRateLimiter(`user:${ctx.user.id}:list`);
+    if (!rateLimitCheck.allowed) {
+      throw new Error(`Rate limit exceeded. Retry after ${rateLimitCheck.retryAfter}s`);
+    }
+    return listWebhooks(ctx.user.id);
+  }),
+
+  getById: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input, ctx }) => {
+      return getWebhook(input.id, ctx.user.id);
+    }),
+
+  create: protectedProcedure
+    .input(z.object({
+      name: z.string().min(1).max(255),
+      url: z.string().url(),
+      events: z.array(z.string()).min(1),
+      secret: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const rateLimitCheck = webhookRateLimiter(`user:${ctx.user.id}:create`);
+      if (!rateLimitCheck.allowed) {
+        throw new Error(`Rate limit exceeded. Retry after ${rateLimitCheck.retryAfter}s`);
+      }
+      return createWebhook(ctx.user.id, input.name, input.url, input.events as any, input.secret);
+    }),
+
+  update: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      url: z.string().url().optional(),
+      events: z.array(z.string()).optional(),
+      isActive: z.boolean().optional(),
+      secret: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { id, ...updates } = input;
+      return updateWebhook(id, ctx.user.id, updates as any);
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      return deleteWebhook(input.id, ctx.user.id);
+    }),
+
+  test: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const rateLimitCheck = webhookRateLimiter(`user:${ctx.user.id}:test`);
+      if (!rateLimitCheck.allowed) {
+        throw new Error(`Rate limit exceeded. Retry after ${rateLimitCheck.retryAfter}s`);
+      }
+      return testWebhook(input.id, ctx.user.id);
+    }),
+
+  logs: protectedProcedure
+    .input(z.object({ webhookId: z.number(), limit: z.number().default(50) }))
+    .query(async ({ input, ctx }) => {
+      return getWebhookLogs(input.webhookId, ctx.user.id, input.limit);
+    }),
+});
+
+// ── Dashboard Router ───────────────────────────────────────────────
 const dashboardRouter = router({
   stats: protectedProcedure.query(({ ctx }) => getDashboardStats(ctx.user.id)),
 });
@@ -581,6 +673,7 @@ export const appRouter = router({
   dashboard: dashboardRouter,
   llm: llmRouter,
   service: serviceRouter,
+  webhook: webhookRouter,
 });
 
 export type AppRouter = typeof appRouter;
