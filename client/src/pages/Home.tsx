@@ -1,6 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { getLoginUrl } from "@/const";
 import { Shield, Bot, Lock, Activity, Puzzle, Clock, ArrowRight } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -23,7 +22,7 @@ export default function Home() {
             <span className="font-bold text-lg tracking-tight">Shashclaw</span>
           </div>
           <Button
-            onClick={() => { window.location.href = getLoginUrl(); }}
+            onClick={() => { setLocation("/login"); }}
             size="sm"
           >
             Sign in
@@ -50,7 +49,7 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button
               size="lg"
-              onClick={() => { window.location.href = getLoginUrl(); }}
+              onClick={() => { setLocation("/login"); }}
               className="gap-2"
             >
               Get Started <ArrowRight className="h-4 w-4" />

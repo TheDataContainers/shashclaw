@@ -16,6 +16,7 @@ import Skills from "./pages/Skills";
 import Marketplace from "./pages/Marketplace";
 import Integrations from "./pages/Integrations";
 import Configuration from "./pages/Configuration";
+import CustomLogin from "./pages/CustomLogin";
 
 function DashboardPage({ component: Component }: { component: React.ComponentType }) {
   return (
@@ -29,6 +30,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/login" component={CustomLogin} />
       <Route path="/dashboard">{() => <DashboardPage component={Dashboard} />}</Route>
       <Route path="/agents">{() => <DashboardPage component={Agents} />}</Route>
       <Route path="/agents/:id">{(params) => <DashboardLayout><AgentDetail id={Number(params.id)} /></DashboardLayout>}</Route>

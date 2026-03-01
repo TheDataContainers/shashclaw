@@ -19,3 +19,6 @@
 - [x] Dark theme enterprise design
 - [x] Landing/Home page
 - [x] Vitest tests for all routers (34 tests passing)
+- [x] Custom authentication handler to bypass Manus OAuth redirect URI validation
+- [x] Custom login page with email-based authentication
+- [x] Demo account login for testing
