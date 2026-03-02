@@ -7,4 +7,8 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  // Production readiness flags
+  singleUserMode: process.env.SINGLE_USER_MODE === 'true',
+  killSwitchEnabled: process.env.KILL_SWITCH_ENABLED === 'true',
+  ownerId: process.env.OWNER_ID,
 };

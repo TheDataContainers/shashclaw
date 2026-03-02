@@ -32,3 +32,14 @@
 - [x] Add rate limiting for integration API calls
 - [x] Create comprehensive SECURITY.md documentation
 - [x] Build integration webhook system for event-driven automation
+
+## Production Readiness Fixes
+
+- [x] Fix container runtime Docker exec implementation
+- [x] Add KILL_SWITCH_ENABLED environment variable and enforcement
+- [x] Add SINGLE_USER_MODE and OWNER_ID configuration
+- [x] Disable skill marketplace until security audit
+- [x] Add usage_evals table for agent quality scoring
+- [x] Add audit query helpers for PM analytics
+- [ ] Test container isolation (AgentA can't read AgentB files)
+- [ ] Create 3 PM agent templates (IdeaGen, SpecCopilot, MeetingPrep)

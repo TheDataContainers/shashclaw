@@ -1,4 +1,4 @@
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, and, sql, desc, gt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser, users,
@@ -10,6 +10,7 @@ import {
   scheduledTasks, InsertScheduledTask,
   agentFiles, InsertAgentFile,
   integrations, InsertIntegration,
+  usageEvals, InsertUsageEval,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -48,38 +49,41 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     if (user.lastSignedIn !== undefined) { values.lastSignedIn = user.lastSignedIn; updateSet.lastSignedIn = user.lastSignedIn; }
     if (user.role !== undefined) { values.role = user.role; updateSet.role = user.role; }
     else if (user.openId === ENV.ownerOpenId) { values.role = 'admin'; updateSet.role = 'admin'; }
-    if (!values.lastSignedIn) values.lastSignedIn = new Date();
-    if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = new Date();
+    if (!values.lastSignedIn) { values.lastSignedIn = new Date(); }
+    if (Object.keys(updateSet).length === 0) { updateSet.lastSignedIn = new Date(); }
     await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
-  } catch (error) { console.error("[Database] Failed to upsert user:", error); throw error; }
+  } catch (error) {
+    console.error("[Database] Failed to upsert user:", error);
+    throw error;
+  }
 }
 
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
-  if (!db) return undefined;
+  if (!db) { console.warn("[Database] Cannot get user: database not available"); return undefined; }
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
-// ── Agents ─────────────────────────────────────────────────────────────
+// ── Agents ────────────────────────────────────────────────────────────
 export async function createAgent(data: InsertAgent) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(agents).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(agents).values(data);
+  return result;
 }
 
 export async function getAgentsByUser(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(agents).where(eq(agents.userId, userId)).orderBy(desc(agents.updatedAt));
+  return await db.select().from(agents).where(eq(agents.userId, userId));
 }
 
 export async function getAgentById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(agents).where(eq(agents.id, id)).limit(1);
-  return result[0];
+  return result.length > 0 ? result[0] : undefined;
 }
 
 export async function updateAgent(id: number, data: Partial<InsertAgent>) {
@@ -94,28 +98,28 @@ export async function deleteAgent(id: number) {
   await db.delete(agents).where(eq(agents.id, id));
 }
 
-// ── Skills ─────────────────────────────────────────────────────────────
+// ── Skills ────────────────────────────────────────────────────────────
 export async function getAllSkills() {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(skills).orderBy(desc(skills.updatedAt));
+  return await db.select().from(skills);
 }
 
 export async function getSkillById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(skills).where(eq(skills.id, id)).limit(1);
-  return result[0];
+  return result.length > 0 ? result[0] : undefined;
 }
 
-export async function createSkill(data: InsertSkill) {
+export async function createSkill(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(skills).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(skills).values(data);
+  return result;
 }
 
-export async function updateSkill(id: number, data: Partial<InsertSkill>) {
+export async function updateSkill(id: number, data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(skills).set(data).where(eq(skills.id, id));
@@ -125,19 +129,14 @@ export async function updateSkill(id: number, data: Partial<InsertSkill>) {
 export async function getAgentSkills(agentId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select({
-    agentSkill: agentSkills,
-    skill: skills,
-  }).from(agentSkills)
-    .innerJoin(skills, eq(agentSkills.skillId, skills.id))
-    .where(eq(agentSkills.agentId, agentId));
+  return await db.select().from(agentSkills).where(eq(agentSkills.agentId, agentId));
 }
 
 export async function installSkillToAgent(data: InsertAgentSkill) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.insert(agentSkills).values(data);
-  await db.update(skills).set({ installCount: sql`${skills.installCount} + 1` }).where(eq(skills.id, data.skillId));
+  const [result] = await db.insert(agentSkills).values(data);
+  return result;
 }
 
 export async function uninstallSkillFromAgent(agentId: number, skillId: number) {
@@ -147,57 +146,52 @@ export async function uninstallSkillFromAgent(agentId: number, skillId: number) 
 }
 
 // ── Messages ───────────────────────────────────────────────────────────
-export async function getMessagesByAgent(agentId: number, limit = 50) {
+export async function getMessagesByAgent(agentId: number, limit: number = 50) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(messages).where(eq(messages.agentId, agentId)).orderBy(desc(messages.createdAt)).limit(limit);
+  return await db.select().from(messages).where(eq(messages.agentId, agentId)).limit(limit);
 }
 
 export async function createMessage(data: InsertMessage) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(messages).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(messages).values(data);
+  return result;
 }
 
 // ── Audit Logs ─────────────────────────────────────────────────────────
-export async function getAuditLogs(filters?: { agentId?: number; category?: string; limit?: number }) {
+export async function getAuditLogs(userId: number, limit: number = 100) {
   const db = await getDb();
   if (!db) return [];
-  const conditions = [];
-  if (filters?.agentId) conditions.push(eq(auditLogs.agentId, filters.agentId));
-  if (filters?.category) conditions.push(eq(auditLogs.category, filters.category as any));
-  const query = conditions.length > 0
-    ? db.select().from(auditLogs).where(and(...conditions)).orderBy(desc(auditLogs.createdAt)).limit(filters?.limit ?? 100)
-    : db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(filters?.limit ?? 100);
-  return query;
+  return await db.select().from(auditLogs).where(eq(auditLogs.userId, userId)).limit(limit).orderBy(desc(auditLogs.createdAt));
 }
 
 export async function createAuditLog(data: InsertAuditLog) {
   const db = await getDb();
-  if (!db) { console.warn("[AuditLog] Database not available"); return; }
-  await db.insert(auditLogs).values(data);
+  if (!db) throw new Error("Database not available");
+  const [result] = await db.insert(auditLogs).values(data);
+  return result;
 }
 
 // ── Scheduled Tasks ────────────────────────────────────────────────────
 export async function getScheduledTasks(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(scheduledTasks).where(eq(scheduledTasks.userId, userId)).orderBy(desc(scheduledTasks.updatedAt));
+  return await db.select().from(scheduledTasks).where(eq(scheduledTasks.userId, userId));
 }
 
 export async function getScheduledTaskById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(scheduledTasks).where(eq(scheduledTasks.id, id)).limit(1);
-  return result[0];
+  return result.length > 0 ? result[0] : undefined;
 }
 
 export async function createScheduledTask(data: InsertScheduledTask) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(scheduledTasks).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(scheduledTasks).values(data);
+  return result;
 }
 
 export async function updateScheduledTask(id: number, data: Partial<InsertScheduledTask>) {
@@ -216,14 +210,14 @@ export async function deleteScheduledTask(id: number) {
 export async function getAgentFiles(agentId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(agentFiles).where(eq(agentFiles.agentId, agentId)).orderBy(desc(agentFiles.createdAt));
+  return await db.select().from(agentFiles).where(eq(agentFiles.agentId, agentId));
 }
 
 export async function createAgentFile(data: InsertAgentFile) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(agentFiles).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(agentFiles).values(data);
+  return result;
 }
 
 export async function deleteAgentFile(id: number) {
@@ -236,14 +230,14 @@ export async function deleteAgentFile(id: number) {
 export async function getIntegrations(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(integrations).where(eq(integrations.userId, userId)).orderBy(desc(integrations.updatedAt));
+  return await db.select().from(integrations).where(eq(integrations.userId, userId));
 }
 
 export async function createIntegration(data: InsertIntegration) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(integrations).values(data);
-  return { id: result[0].insertId };
+  const [result] = await db.insert(integrations).values(data);
+  return result;
 }
 
 export async function updateIntegration(id: number, data: Partial<InsertIntegration>) {
@@ -274,4 +268,79 @@ export async function getDashboardStats(userId: number) {
     totalTasks: taskCount?.count ?? 0,
     recentLogs: logCount?.count ?? 0,
   };
+}
+
+// ── Usage Evaluations ──────────────────────────────────────────────────────
+
+export async function createUsageEval(data: InsertUsageEval) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [result] = await db.insert(usageEvals).values(data);
+  return result;
+}
+
+export async function getAgentEvals(agentId: number, days: number = 7) {
+  const db = await getDb();
+  if (!db) return [];
+  const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  return await db.select().from(usageEvals)
+    .where(and(eq(usageEvals.agentId, agentId), gt(usageEvals.createdAt, cutoffDate)))
+    .orderBy(desc(usageEvals.createdAt));
+}
+
+export async function getAgentEvalStats(agentId: number, days: number = 7) {
+  const db = await getDb();
+  if (!db) return { avgQuality: 0, avgCompletion: 0, avgFollowup: 0, errorRate: 0, totalEvals: 0 };
+  
+  const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const evals = await db.select().from(usageEvals)
+    .where(and(eq(usageEvals.agentId, agentId), gt(usageEvals.createdAt, cutoffDate)));
+  
+  if (evals.length === 0) return { avgQuality: 0, avgCompletion: 0, avgFollowup: 0, errorRate: 0, totalEvals: 0 };
+  
+  const avgQuality = evals.reduce((sum, e) => sum + (e.qualityScore || 0), 0) / evals.length;
+  const avgCompletion = evals.reduce((sum, e) => sum + (e.completionRate || 0), 0) / evals.length;
+  const avgFollowup = evals.reduce((sum, e) => sum + (e.followupRate || 0), 0) / evals.length;
+  const errorRate = (evals.filter(e => e.errorOccurred).length / evals.length) * 100;
+  
+  return { avgQuality, avgCompletion, avgFollowup, errorRate, totalEvals: evals.length };
+}
+
+// ── PM Analytics Queries ───────────────────────────────────────────────────
+export async function getPMAnalyticsQuery(userId: number, days: number = 7) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  
+  // Query: Agent performance summary for PM review
+  return await db.select({
+    agentName: agents.name,
+    totalChats: sql<number>`count(${auditLogs.id})`,
+    avgResponseTime: sql<number>`avg(${usageEvals.responseTime})`,
+    errorCount: sql<number>`sum(case when ${usageEvals.errorOccurred} = true then 1 else 0 end)`,
+    avgQuality: sql<number>`avg(${usageEvals.qualityScore})`,
+  })
+  .from(agents)
+  .leftJoin(auditLogs, eq(auditLogs.agentId, agents.id))
+  .leftJoin(usageEvals, eq(usageEvals.agentId, agents.id))
+  .where(and(eq(agents.userId, userId), gt(auditLogs.createdAt, cutoffDate)))
+  .groupBy(agents.id);
+}
+
+export async function getAgentsToKill(userId: number, errorThreshold: number = 20, responseTimeThreshold: number = 30000) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const userAgents = await db.select().from(agents).where(eq(agents.userId, userId));
+  const candidates = [];
+  
+  for (const agent of userAgents) {
+    const stats = await getAgentEvalStats(agent.id, 7);
+    if (stats.errorRate > errorThreshold || (stats.avgCompletion && stats.avgCompletion < 50)) {
+      candidates.push({ agent, stats });
+    }
+  }
+  
+  return candidates;
 }

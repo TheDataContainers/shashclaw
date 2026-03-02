@@ -195,29 +195,24 @@ describe("Skills", () => {
     expect(skill?.name).toBe("Web Scraper");
   });
 
-  it("admin can create skills", async () => {
+  it("skill creation is disabled for security audit", async () => {
     const ctx = createUserContext("admin");
     const caller = appRouter.createCaller(ctx);
-    const result = await caller.skill.create({ name: "New Skill", slug: "new-skill" });
-    expect(result).toHaveProperty("id");
+    await expect(caller.skill.create({ name: "New Skill", slug: "new-skill" })).rejects.toThrow();
   });
 
-  it("non-admin cannot create skills", async () => {
-    const ctx = createUserContext("user");
-    const caller = appRouter.createCaller(ctx);
-    await expect(caller.skill.create({ name: "Fail", slug: "fail" })).rejects.toThrow();
-  });
 
-  it("installs skill to agent", async () => {
+
+  it("skill installation is disabled for security audit", async () => {
     const ctx = createUserContext();
     const caller = appRouter.createCaller(ctx);
-    await expect(caller.skill.install({ agentId: 1, skillId: 1 })).resolves.not.toThrow();
+    await expect(caller.skill.install({ agentId: 1, skillId: 1 })).rejects.toThrow();
   });
 
-  it("uninstalls skill from agent", async () => {
+  it("skill uninstallation is disabled for security audit", async () => {
     const ctx = createUserContext();
     const caller = appRouter.createCaller(ctx);
-    await expect(caller.skill.uninstall({ agentId: 1, skillId: 1 })).resolves.not.toThrow();
+    await expect(caller.skill.uninstall({ agentId: 1, skillId: 1 })).rejects.toThrow();
   });
 });
 

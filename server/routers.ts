@@ -124,6 +124,7 @@ const agentRouter = router({
 });
 
 // ── Skill Router ───────────────────────────────────────────────────────
+// MARKETPLACE DISABLED FOR SECURITY AUDIT
 const skillRouter = router({
   list: protectedProcedure.query(() => getAllSkills()),
 
@@ -131,6 +132,8 @@ const skillRouter = router({
     .input(z.object({ id: z.number() }))
     .query(({ input }) => getSkillById(input.id)),
 
+  // DISABLED UNTIL SECURITY AUDIT
+  // create: adminProcedure
   create: adminProcedure
     .input(z.object({
       name: z.string().min(1).max(255),
@@ -144,37 +147,26 @@ const skillRouter = router({
       permissions: z.any().optional(),
       config: z.any().optional(),
     }))
-    .mutation(async ({ input, ctx }) => {
-      const result = await createSkill(input);
-      await createAuditLog({
-        userId: ctx.user.id, action: "skill.created",
-        category: "skill", severity: "info", details: { name: input.name },
-      });
-      return result;
+    .mutation(async () => {
+      throw new Error('Skill marketplace is currently disabled for security audit. Please contact the administrator.');
     }),
 
   agentSkills: protectedProcedure
     .input(z.object({ agentId: z.number() }))
     .query(({ input }) => getAgentSkills(input.agentId)),
 
+  // DISABLED UNTIL SECURITY AUDIT
   install: protectedProcedure
     .input(z.object({ agentId: z.number(), skillId: z.number(), grantedPermissions: z.any().optional() }))
-    .mutation(async ({ input, ctx }) => {
-      await installSkillToAgent(input);
-      await createAuditLog({
-        agentId: input.agentId, userId: ctx.user.id, action: "skill.installed",
-        category: "skill", severity: "info", details: { skillId: input.skillId },
-      });
+    .mutation(async () => {
+      throw new Error('Skill installation is currently disabled for security audit. Please contact the administrator.');
     }),
 
+  // DISABLED UNTIL SECURITY AUDIT
   uninstall: protectedProcedure
     .input(z.object({ agentId: z.number(), skillId: z.number() }))
-    .mutation(async ({ input, ctx }) => {
-      await uninstallSkillFromAgent(input.agentId, input.skillId);
-      await createAuditLog({
-        agentId: input.agentId, userId: ctx.user.id, action: "skill.uninstalled",
-        category: "skill", severity: "info", details: { skillId: input.skillId },
-      });
+    .mutation(async () => {
+      throw new Error('Skill uninstallation is currently disabled for security audit. Please contact the administrator.');
     }),
 });
 

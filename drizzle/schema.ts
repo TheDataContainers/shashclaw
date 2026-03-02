@@ -232,3 +232,24 @@ export const webhookLogs = mysqlTable("webhookLogs", {
 
 export type WebhookLog = typeof webhookLogs.$inferSelect;
 export type InsertWebhookLog = typeof webhookLogs.$inferInsert;
+
+
+// ── Usage Evaluations ──────────────────────────────────────────────────────
+export const usageEvals = mysqlTable("usageEvals", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  agentId: int("agentId").notNull(),
+  messageId: int("messageId"),
+  qualityScore: int("qualityScore"), // 0-10 scale
+  completionRate: int("completionRate"), // 0-100 percentage
+  followupRate: int("followupRate"), // 0-100 percentage (how often user asks follow-up)
+  responseTime: int("responseTime"), // milliseconds
+  errorOccurred: boolean("errorOccurred").default(false),
+  feedback: text("feedback"), // User feedback text
+  tags: json("tags"), // Array of tags for categorization
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UsageEval = typeof usageEvals.$inferSelect;
+export type InsertUsageEval = typeof usageEvals.$inferInsert;
