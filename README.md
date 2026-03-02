@@ -291,7 +291,35 @@ Platform-wide settings for LLM providers, security, and notifications:
 - **Security** — Auto-isolation, concurrent agent limits
 - **Notifications** — Error alerts, task completion, approval requests
 
-### 9. Dashboard
+### 9. Webhooks
+
+Event-driven automation with webhook delivery to external systems:
+
+- **Event Subscriptions** — Subscribe to agent lifecycle events (start, complete, fail)
+- **HMAC Signatures** — Secure webhook delivery with SHA-256 signatures
+- **Retry Logic** — Automatic retry with exponential backoff (up to 3 attempts)
+- **Webhook Logs** — Track delivery status and errors
+- **Custom Headers** — Include webhook ID, timestamp, and event metadata
+
+**API Endpoints:**
+- `GET /api/trpc/webhook.list` — List user webhooks
+- `POST /api/trpc/webhook.create` — Create a new webhook
+- `PATCH /api/trpc/webhook.update` — Update webhook configuration
+- `DELETE /api/trpc/webhook.delete` — Delete a webhook
+- `POST /api/trpc/webhook.test` — Test webhook delivery
+- `GET /api/trpc/webhook.logs` — Retrieve webhook delivery logs
+
+### 10. Rate Limiting
+
+Protect the platform from abuse with token bucket rate limiting:
+
+- **Per-User Limits** — 100 requests/minute per user
+- **Per-Integration Limits** — 10 requests/minute per integration
+- **Per-Webhook Limits** — 50 requests/minute per webhook
+- **Graceful Degradation** — Clear error messages with retry-after headers
+- **Configurable** — Adjust limits per deployment needs
+
+### 11. Dashboard
 
 Real-time overview of platform metrics and recent activity:
 

@@ -1337,3 +1337,107 @@ Shashclaw is designed to be extensible at every layer:
 - **Custom Features** — Add routers and pages as needed
 
 This makes Shashclaw suitable for deployment in any environment, from local development to enterprise cloud infrastructure.
+
+
+---
+
+## Webhook System
+
+### Overview
+
+Shashclaw includes a built-in webhook system for event-driven automation. Webhooks allow external systems to subscribe to agent lifecycle events and receive real-time notifications.
+
+### Webhook Features
+
+- **Event Subscriptions** — Subscribe to specific events (agent.started, agent.completed, agent.failed, etc.)
+- **HMAC-SHA256 Signatures** — Secure webhook delivery with cryptographic signatures
+- **Automatic Retries** — Exponential backoff retry logic (up to 3 attempts)
+- **Delivery Logs** — Track all webhook deliveries with status codes and errors
+- **Custom Headers** — Include webhook ID, timestamp, and event metadata
+
+### Extending Webhooks
+
+To add new event types, modify `server/webhooks.ts`:
+
+```typescript
+// Add new event type
+export async function triggerWebhook(
+  userId: number,
+  event: 'agent.started' | 'agent.completed' | 'agent.failed' | 'skill.installed' | 'custom.event',
+  payload: any
+) {
+  // Existing implementation
+}
+```
+
+### Webhook Payload Example
+
+```json
+{
+  "event": "agent.started",
+  "timestamp": "2026-03-01T23:45:00Z",
+  "webhookId": 42,
+  "data": {
+    "agentId": 5,
+    "agentName": "DataAnalyzer",
+    "status": "running"
+  }
+}
+```
+
+---
+
+## Rate Limiting
+
+### Overview
+
+Shashclaw implements token bucket rate limiting to protect against abuse and ensure fair resource usage.
+
+### Current Limits
+
+- **Per-User** — 100 requests/minute
+- **Per-Integration** — 10 requests/minute  
+- **Per-Webhook** — 50 requests/minute
+
+### Customizing Rate Limits
+
+Edit `server/_core/rateLimit.ts`:
+
+```typescript
+export function integrationRateLimiter(key: string) {
+  const limit = 10; // requests per minute
+  const window = 60000; // milliseconds
+  // Adjust these values for your deployment
+}
+```
+
+### Rate Limit Response
+
+When rate limit is exceeded:
+
+```json
+{
+  "error": "Rate limit exceeded. Retry after 45s"
+}
+```
+
+The response includes a `Retry-After` header with the number of seconds to wait before retrying.
+
+### Monitoring Rate Limits
+
+Track rate limit violations in audit logs:
+
+```typescript
+// Audit log entry
+{
+  "action": "integration.rate_limit_exceeded",
+  "category": "integration",
+  "severity": "warning",
+  "details": {
+    "userId": 1,
+    "integrationId": 5,
+    "requestsPerMinute": 15,
+    "limit": 10
+  }
+}
+```
