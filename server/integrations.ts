@@ -7,8 +7,8 @@ import { encryptCredential, decryptCredential, maskCredential, isValidApiKey, is
 let _db: ReturnType<typeof drizzle> | null = null;
 
 async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    _db = drizzle(process.env.DATABASE_URL);
+  if (!_db && ENV.databaseUrl) {
+    _db = drizzle(ENV.databaseUrl);
   }
   return _db;
 }
