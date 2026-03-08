@@ -18,12 +18,17 @@ let _db: ReturnType<typeof drizzle> | null = null;
 
 export async function getDb() {
   if (!_db && ENV.databaseUrl) {
+    console.log("[DB DEBUG] Attempting to connect to database...");
+    console.log("[DB DEBUG] Database URL length:", ENV.databaseUrl.length);
     try {
       _db = drizzle(ENV.databaseUrl);
+      console.log("[DB DEBUG] Database connection created successfully");
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      console.warn("[DB DEBUG] Failed to connect:", error);
       _db = null;
     }
+  } else if (!ENV.databaseUrl) {
+    console.log("[DB DEBUG] No database URL configured");
   }
   return _db;
 }
