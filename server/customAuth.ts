@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import * as db from "./db";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { sdk } from "./_core/sdk";
+import { ENV } from "./_core/env";
 import { COOKIE_NAME } from "@shared/const";
 import { ONE_YEAR_MS } from "@shared/const";
 
@@ -22,6 +23,12 @@ export function registerCustomAuthRoutes(app: Express) {
 
       if (!email || typeof email !== "string") {
         res.status(400).json({ error: "email is required" });
+        return;
+      }
+
+      // In single-user mode, only the owner email can log in
+      if (ENV.singleUserMode && ENV.ownerEmail && email.toLowerCase() !== ENV.ownerEmail.toLowerCase()) {
+        res.status(403).json({ error: "Access restricted to owner account" });
         return;
       }
 
