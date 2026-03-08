@@ -13,7 +13,7 @@ export const ENV = {
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
   isProduction: process.env.NODE_ENV === "production",
   anthropicKey: process.env.ANTHROPIC_KEY ?? "",
-  ownerEmail: process.env.OWNER_EMAIL ?? "",
+  ownerEmail: (process.env.OWNER_EMAIL ?? "").toLowerCase(),
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   // Production readiness flags

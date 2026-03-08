@@ -3,8 +3,7 @@ import * as db from "./db";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { sdk } from "./_core/sdk";
 import { ENV } from "./_core/env";
-import { COOKIE_NAME } from "@shared/const";
-import { ONE_YEAR_MS } from "@shared/const";
+import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 
 /**
  * Custom authentication handler that bypasses Manus OAuth portal redirect URI validation.
@@ -27,7 +26,7 @@ export function registerCustomAuthRoutes(app: Express) {
       }
 
       // In single-user mode, only the owner email can log in
-      if (ENV.singleUserMode && ENV.ownerEmail && email.toLowerCase() !== ENV.ownerEmail.toLowerCase()) {
+      if (ENV.singleUserMode && ENV.ownerEmail && email.toLowerCase() !== ENV.ownerEmail) {
         res.status(403).json({ error: "Access restricted to owner account" });
         return;
       }
