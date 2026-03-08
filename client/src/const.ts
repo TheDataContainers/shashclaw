@@ -6,8 +6,7 @@ export const getLoginUrl = () => {
   const appId = import.meta.env.VITE_APP_ID;
 
   if (!oauthPortalUrl || !appId) {
-    console.error("OAuth configuration missing: VITE_OAUTH_PORTAL_URL and VITE_APP_ID are required");
-    return null;
+    return "/login";
   }
 
   const redirectUri = `${window.location.origin}/api/oauth/callback`;

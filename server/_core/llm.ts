@@ -283,7 +283,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   const otherMessages = messages.filter(msg => msg.role !== 'system');
 
   const payload: Record<string, unknown> = {
-    model: "claude-sonnet-4-5",
+    model: "claude-sonnet-4-5-20250929",
     messages: otherMessages.map(normalizeMessage),
     max_tokens: 32768,
   };
@@ -342,7 +342,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   return {
     id: anthropicResponse.id || `msg_${Date.now()}`,
     created: Math.floor(Date.now() / 1000),
-    model: anthropicResponse.model || "claude-sonnet-4-5",
+    model: anthropicResponse.model || "claude-sonnet-4-5-20250929",
     choices: [{
       index: 0,
       message: {
