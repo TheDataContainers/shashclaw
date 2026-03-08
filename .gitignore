@@ -109,3 +109,5 @@ temp/
 # Webdev artifacts (checkpoint zips, migrations, etc.)
 .webdev/
 railway_error.txt
+CODEBASE_ANALYSIS.md
+cookies.txt
