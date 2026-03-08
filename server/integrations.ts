@@ -1,5 +1,5 @@
 import { eq, and } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { drizzle } from "drizzle-orm/node-postgres";
 import { llmConfigs, serviceIntegrations, LLMConfig, InsertLLMConfig, ServiceIntegration, InsertServiceIntegration } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { encryptCredential, decryptCredential, maskCredential, isValidApiKey, isValidWebhookUrl } from "./_core/encryption";
