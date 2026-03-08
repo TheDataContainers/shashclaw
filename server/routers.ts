@@ -394,7 +394,7 @@ const llmRouter = router({
   create: protectedProcedure
     .input(z.object({
       name: z.string().min(1).max(255),
-      provider: z.enum(["openai", "anthropic", "custom", "manus"]),
+      provider: z.enum(["openai", "anthropic", "custom"]),
       model: z.string().min(1).max(255),
       apiKey: z.string().optional(),
       apiUrl: z.string().url().optional(),
