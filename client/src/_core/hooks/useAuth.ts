@@ -42,8 +42,10 @@ export function useAuth(options?: UseAuthOptions) {
   }, [logoutMutation, utils]);
 
   const state = useMemo(() => {
+    const MANUS_RUNTIME_USER_INFO_KEY = "shashclaw-runtime-user-info";
     localStorage.setItem(
-      const MANUS_RUNTIME_USER_INFO_KEY = "shashclaw-runtime-user-info";      JSON.stringify(meQuery.data)
+      MANUS_RUNTIME_USER_INFO_KEY,
+      JSON.stringify(meQuery.data)
     );
     return {
       user: meQuery.data ?? null,
