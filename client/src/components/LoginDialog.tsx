@@ -9,23 +9,27 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-interface ManusDialogProps {
+interface LoginDialogProps {
   title?: string;
   logo?: string;
   open?: boolean;
   onLogin: () => void;
   onOpenChange?: (open: boolean) => void;
   onClose?: () => void;
+  description?: string;
+  buttonText?: string;
 }
 
-export function ManusDialog({
-  title,
+export function LoginDialog({
+  title = "Welcome",
   logo,
   open = false,
   onLogin,
   onOpenChange,
   onClose,
-}: ManusDialogProps) {
+  description = "Please login to continue",
+  buttonText = "Login",
+}: LoginDialogProps) {
   const [internalOpen, setInternalOpen] = useState(open);
 
   useEffect(() => {
@@ -61,16 +65,18 @@ export function ManusDialog({
                 className="w-10 h-10 rounded-md"
               />
             </div>
-          ) : null}
+          ) : (
+             <div className="w-16 h-16 bg-[#1a1a19] rounded-xl flex items-center justify-center text-white text-2xl font-bold">
+               S
+             </div>
+          )}
 
           {/* Title and subtitle */}
-          {title ? (
-            <DialogTitle className="text-xl font-semibold text-[#34322d] leading-[26px] tracking-[-0.44px]">
-              {title}
-            </DialogTitle>
-          ) : null}
+          <DialogTitle className="text-xl font-semibold text-[#34322d] leading-[26px] tracking-[-0.44px]">
+            {title}
+          </DialogTitle>
           <DialogDescription className="text-sm text-[#858481] leading-5 tracking-[-0.154px]">
-            Please login with Manus to continue
+            {description}
           </DialogDescription>
         </div>
 
@@ -80,7 +86,7 @@ export function ManusDialog({
             onClick={onLogin}
             className="w-full h-10 bg-[#1a1a19] hover:bg-[#1a1a19]/90 text-white rounded-[10px] text-sm font-medium leading-5 tracking-[-0.154px]"
           >
-            Login with Manus
+            {buttonText}
           </Button>
         </DialogFooter>
       </DialogContent>

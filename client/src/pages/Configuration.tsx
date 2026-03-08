@@ -10,12 +10,15 @@ import { Badge } from "@/components/ui/badge";
 import { AlertCircle, Trash2, Plus, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 
+// Define a union type for providers that can be extended
+type LLMProvider = "openai" | "anthropic" | "custom" | "other";
+
 export default function Configuration() {
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     name: "",
-    provider: "openai" as "openai" | "anthropic" | "custom" | "manus",
+    provider: "openai" as LLMProvider,
     model: "",
     apiKey: "",
     apiUrl: "",
@@ -36,7 +39,7 @@ export default function Configuration() {
       setEditingId(config.id);
       setFormData({
         name: config.name,
-        provider: config.provider,
+        provider: config.provider as LLMProvider,
         model: config.model,
         apiKey: "",
         apiUrl: config.apiUrl || "",
@@ -68,8 +71,8 @@ export default function Configuration() {
       return;
     }
 
-    if (formData.provider === "custom" && !formData.apiUrl) {
-      toast.error("API URL is required for custom providers");
+    if ((formData.provider === "custom" || formData.provider === "other") && !formData.apiUrl) {
+      toast.error("API URL is required for custom or other providers");
       return;
     }
 
@@ -111,7 +114,7 @@ export default function Configuration() {
       toast.success("Configuration deleted");
       refetch();
     } catch (error: any) {
-      toast.error(error.message || "Failed to delete configuration");
+      toast.toast.error(error.message || "Failed to delete configuration");
     }
   };
 
@@ -128,12 +131,12 @@ export default function Configuration() {
     }
   };
 
-  const getProviderIcon = (provider: string) => {
-    const icons: Record<string, string> = {
+  const getProviderIcon = (provider: LLMProvider) => {
+    const icons: Record<LLMProvider, string> = {
       openai: "🤖",
       anthropic: "🧠",
       custom: "⚙️",
-      manus: "🔷",
+      other: "📌", // General icon for other providers
     };
     return icons[provider] || "📌";
   };
@@ -169,7 +172,7 @@ export default function Configuration() {
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">{getProviderIcon(config.provider)}</span>
+                    <span className="text-2xl">{getProviderIcon(config.provider as LLMProvider)}</span>
                     <div>
                       <CardTitle className="text-lg">{config.name}</CardTitle>
                       <CardDescription>
@@ -267,14 +270,14 @@ export default function Configuration() {
 
               <div>
                 <Label htmlFor="provider">Provider</Label>
-                <Select value={formData.provider} onValueChange={(value: any) => setFormData({ ...formData, provider: value })}>
+                <Select value={formData.provider} onValueChange={(value: LLMProvider) => setFormData({ ...formData, provider: value }) }>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="openai">OpenAI</SelectItem>
                     <SelectItem value="anthropic">Anthropic</SelectItem>
-                    <SelectItem value="manus">Manus</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
                     <SelectItem value="custom">Custom</SelectItem>
                   </SelectContent>
                 </Select>
@@ -292,7 +295,7 @@ export default function Configuration() {
                 />
               </div>
 
-              {formData.provider === "custom" && (
+              {(formData.provider === "custom" || formData.provider === "other") && (
                 <div>
                   <Label htmlFor="apiUrl">API URL</Label>
                   <Input
@@ -306,7 +309,7 @@ export default function Configuration() {
               )}
             </div>
 
-            {formData.provider !== "manus" && (
+            {formData.provider !== "other" && formData.provider !== "custom" && (
               <div>
                 <Label htmlFor="apiKey">API Key</Label>
                 <Input
