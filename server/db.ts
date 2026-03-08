@@ -82,7 +82,7 @@ export async function getUserByOpenId(openId: string) {
 export async function createAgent(data: InsertAgent) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(agents).values(data);
+  const [result] = await db.insert(agents).values(data).returning();
   return result;
 }
 
@@ -128,7 +128,7 @@ export async function getSkillById(id: number) {
 export async function createSkill(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(skills).values(data);
+  const [result] = await db.insert(skills).values(data).returning();
   return result;
 }
 
@@ -148,7 +148,7 @@ export async function getAgentSkills(agentId: number) {
 export async function installSkillToAgent(data: InsertAgentSkill) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(agentSkills).values(data);
+  const [result] = await db.insert(agentSkills).values(data).returning();
   return result;
 }
 
@@ -168,7 +168,7 @@ export async function getMessagesByAgent(agentId: number, limit: number = 50) {
 export async function createMessage(data: InsertMessage) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(messages).values(data);
+  const [result] = await db.insert(messages).values(data).returning();
   return result;
 }
 
@@ -182,7 +182,7 @@ export async function getAuditLogs(userId: number, limit: number = 100) {
 export async function createAuditLog(data: InsertAuditLog) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(auditLogs).values(data);
+  const [result] = await db.insert(auditLogs).values(data).returning();
   return result;
 }
 
@@ -203,7 +203,7 @@ export async function getScheduledTaskById(id: number) {
 export async function createScheduledTask(data: InsertScheduledTask) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(scheduledTasks).values(data);
+  const [result] = await db.insert(scheduledTasks).values(data).returning();
   return result;
 }
 
@@ -229,7 +229,7 @@ export async function getAgentFiles(agentId: number) {
 export async function createAgentFile(data: InsertAgentFile) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(agentFiles).values(data);
+  const [result] = await db.insert(agentFiles).values(data).returning();
   return result;
 }
 
@@ -249,7 +249,7 @@ export async function getIntegrations(userId: number) {
 export async function createIntegration(data: InsertIntegration) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(integrations).values(data);
+  const [result] = await db.insert(integrations).values(data).returning();
   return result;
 }
 
@@ -288,7 +288,7 @@ export async function getDashboardStats(userId: number) {
 export async function createUsageEval(data: InsertUsageEval) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(usageEvals).values(data);
+  const [result] = await db.insert(usageEvals).values(data).returning();
   return result;
 }
 
