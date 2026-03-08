@@ -69,8 +69,8 @@ Shashclaw enables you to:
 
 - Node.js 22+
 - pnpm 10+
-- MySQL/TiDB database
-- Manus platform account (for hosting and OAuth)
+- PostgreSQL (Neon) database
+- Optional: Manus OAuth (email auth works without it)
 
 ### Local Development
 
@@ -86,21 +86,13 @@ Shashclaw enables you to:
    ```
 
 3. **Set up environment variables:**
-   Create a `.env.local` file with the following (provided by Manus platform):
+   Create a `.env.local` file with the required variables:
    ```
-   DATABASE_URL=mysql://user:password@host:port/database
+   DATABASE_URL=postgresql://user:password@host/database   # Neon PostgreSQL
+   ANTHROPIC_KEY=your-anthropic-api-key
    JWT_SECRET=your-jwt-secret
-   VITE_APP_ID=your-manus-app-id
-   OAUTH_SERVER_URL=https://api.manus.im
-   VITE_OAUTH_PORTAL_URL=https://manus.im
    OWNER_OPEN_ID=your-owner-id
    OWNER_NAME=Your Name
-   BUILT_IN_FORGE_API_URL=https://api.manus.im/forge
-   BUILT_IN_FORGE_API_KEY=your-forge-api-key
-   VITE_FRONTEND_FORGE_API_KEY=your-frontend-forge-key
-   VITE_FRONTEND_FORGE_API_URL=https://api.manus.im/forge
-   VITE_ANALYTICS_ENDPOINT=https://analytics.manus.im
-   VITE_ANALYTICS_WEBSITE_ID=your-website-id
    ```
 
 4. **Push database schema:**
@@ -126,10 +118,10 @@ Shashclaw enables you to:
 **Tech Stack:**
 - **Frontend:** React 19 + Tailwind CSS 4 + shadcn/ui
 - **Backend:** Express 4 + tRPC 11 + Drizzle ORM
-- **Database:** MySQL/TiDB
+- **Database:** PostgreSQL (Neon)
 - **Storage:** AWS S3
 - **Authentication:** Custom email-based auth + Manus OAuth (optional)
-- **LLM Integration:** Built-in Forge API (supports OpenAI, Anthropic, Google Gemini)
+- **LLM Integration:** Direct Anthropic API (primary) + Google Gemini (fallback)
 
 **Key Components:**
 - `client/` — React frontend with dashboard, agent management, chat, and monitoring
@@ -196,7 +188,7 @@ Shashclaw is live at **[https://shashclaw.manus.space](https://shashclaw.manus.s
 Shashclaw can be deployed on:
 - **Docker** — Containerized deployment with `docker-compose`
 - **Kubernetes** — Scalable multi-node deployments
-- **Self-hosted** — Any environment with Node.js and MySQL/TiDB
+- **Self-hosted** — Any environment with Node.js and PostgreSQL (Neon)
 
 See [EXTENSIBILITY.md](./docs/EXTENSIBILITY.md) for detailed deployment guides.
 
