@@ -25,7 +25,7 @@ export async function setupVite(app: Express, server: Server) {
     const url = req.originalUrl;
 
     try {
-      const baseDir = import.meta.dirname || process.cwd();
+      const baseDir = import.meta.dirname ?? new URL('.', import.meta.url).pathname;
       const clientTemplate = path.resolve(
         baseDir,
         "../..",
@@ -49,7 +49,7 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const baseDir = import.meta.dirname || process.cwd();
+  const baseDir = import.meta.dirname ?? new URL('.', import.meta.url).pathname;
   const distPath =
     process.env.NODE_ENV === "development"
       ? path.resolve(baseDir, "../..", "dist", "public")
