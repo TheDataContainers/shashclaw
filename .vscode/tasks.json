@@ -1,0 +1,72 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build App",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["build"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Dev Server",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["dev"],
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^.*Server running.*$",
+          "line": 0
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*starting.*$",
+          "endsPattern": "^.*Server running.*$"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Lint & Type Check",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["check:types"],
+      "problemMatcher": ["$tsc"],
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Tests (Watch)",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["test"],
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Verify Before Commit",
+      "type": "shell",
+      "command": "bash",
+      "args": ["-c", "pnpm build && echo '✓ Build OK' && pnpm dev &"],
+      "presentation": {
+        "reveal": "always"
+      }
+    }
+  ]
+}
