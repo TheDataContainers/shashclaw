@@ -66,6 +66,8 @@ export type InvokeParams = {
   output_schema?: OutputSchema;
   responseFormat?: ResponseFormat;
   response_format?: ResponseFormat;
+  apiKey?: string;
+  model?: string;
 };
 
 export type ToolCall = {
@@ -265,7 +267,7 @@ const normalizeResponseFormat = ({
 };
 
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
-  assertApiKey();
+  if (!params.apiKey) assertApiKey();
 
   const {
     messages,
@@ -283,7 +285,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   const otherMessages = messages.filter(msg => msg.role !== 'system');
 
   const payload: Record<string, unknown> = {
-    model: "claude-sonnet-4-5-20250929",
+    model: params.model ?? "claude-sonnet-4-5-20250929",
     messages: otherMessages.map(normalizeMessage),
     max_tokens: 32768,
   };
@@ -323,7 +325,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-api-key": ENV.anthropicKey,
+      "x-api-key": params.apiKey ?? ENV.anthropicKey,
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify(payload),

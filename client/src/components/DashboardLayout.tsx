@@ -36,8 +36,8 @@ const menuItems = [
   { icon: MessageSquare, label: "Chat", path: "/chat" },
   { icon: Shield, label: "Audit Logs", path: "/audit" },
   { icon: Clock, label: "Scheduled Tasks", path: "/tasks" },
-  { icon: Puzzle, label: "Skills", path: "/skills" },
-  { icon: Store, label: "Marketplace", path: "/marketplace" },
+  // { icon: Puzzle, label: "Skills", path: "/skills" },
+  // { icon: Store, label: "Marketplace", path: "/marketplace" },
   { icon: Link2, label: "Integrations", path: "/integrations" },
   { icon: Cog, label: "Configuration", path: "/config" },
 ];

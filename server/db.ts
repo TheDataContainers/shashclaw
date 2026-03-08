@@ -11,6 +11,7 @@ import {
   agentFiles, InsertAgentFile,
   integrations, InsertIntegration,
   usageEvals, InsertUsageEval,
+  llmConfigs,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -349,16 +350,32 @@ export async function getPMAnalyticsQuery(userId: number, days: number = 7) {
 export async function getAgentsToKill(userId: number, errorThreshold: number = 20, responseTimeThreshold: number = 30000) {
   const db = await getDb();
   if (!db) return [];
-  
+
   const userAgents = await db.select().from(agents).where(eq(agents.userId, userId));
   const candidates = [];
-  
+
   for (const agent of userAgents) {
     const stats = await getAgentEvalStats(agent.id, 7);
     if (stats.errorRate > errorThreshold || (stats.avgCompletion && stats.avgCompletion < 50)) {
       candidates.push({ agent, stats });
     }
   }
-  
+
   return candidates;
+}
+
+// ── LLM Config Helpers ─────────────────────────────────────────────────────
+export async function getUserDefaultLLMConfig(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(llmConfigs).where(and(eq(llmConfigs.userId, userId), eq(llmConfigs.isDefault, true))).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function incrementDemoMessageCount(userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({
+    demoMessageCount: sql`${users.demoMessageCount} + 1`,
+  }).where(eq(users.id, userId));
 }

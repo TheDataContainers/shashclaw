@@ -38,8 +38,8 @@ function Router() {
       <Route path="/chat/:agentId">{(params) => <DashboardLayout><Chat agentId={Number(params.agentId)} /></DashboardLayout>}</Route>
       <Route path="/audit">{() => <DashboardPage component={AuditLogs} />}</Route>
       <Route path="/tasks">{() => <DashboardPage component={ScheduledTasks} />}</Route>
-      <Route path="/skills">{() => <DashboardPage component={Skills} />}</Route>
-      <Route path="/marketplace">{() => <DashboardPage component={Marketplace} />}</Route>
+      {/* <Route path="/skills">{() => <DashboardPage component={Skills} />}</Route> */}
+      {/* <Route path="/marketplace">{() => <DashboardPage component={Marketplace} />}</Route> */}
       <Route path="/integrations">{() => <DashboardPage component={Integrations} />}</Route>
       <Route path="/config">{() => <DashboardPage component={Configuration} />}</Route>
       <Route path="/404" component={NotFound} />

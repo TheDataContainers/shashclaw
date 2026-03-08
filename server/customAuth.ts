@@ -126,6 +126,7 @@ export function registerCustomAuthRoutes(app: Express) {
         email,
         name,
         loginMethod: "demo",
+        role: "demo",
         lastSignedIn: new Date(),
       });
 

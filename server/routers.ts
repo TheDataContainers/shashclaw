@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -16,6 +17,8 @@ import {
   getAgentFiles, createAgentFile, deleteAgentFile,
   getIntegrations, createIntegration, updateIntegration, deleteIntegration,
   getDashboardStats,
+  getUserDefaultLLMConfig,
+  incrementDemoMessageCount,
 } from "./db";
 import {
   createLLMConfig, getLLMConfig, listLLMConfigs, updateLLMConfig, deleteLLMConfig, testLLMConfig,
@@ -182,6 +185,17 @@ const chatRouter = router({
       const agent = await getAgentById(input.agentId);
       if (!agent || agent.userId !== ctx.user.id) throw new Error("Agent not found");
 
+      // Demo user limit
+      const isDemo = ctx.user.openId.startsWith("demo:");
+      if (isDemo) {
+        if ((ctx.user.demoMessageCount ?? 0) >= 5) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "DEMO_LIMIT_REACHED",
+          });
+        }
+      }
+
       // Save user message
       await createMessage({ agentId: input.agentId, userId: ctx.user.id, role: "user", content: input.content });
 
@@ -195,13 +209,31 @@ const chatRouter = router({
         { role: "user" as const, content: input.content },
       ];
 
+      // For demo: use haiku. For real users: check their default LLM config
+      let llmApiKey: string | undefined;
+      let llmModel: string | undefined;
+
+      if (isDemo) {
+        llmModel = "claude-haiku-4-5-20251001";
+      } else {
+        const llmConfig = await getUserDefaultLLMConfig(ctx.user.id);
+        if (llmConfig?.apiKey) {
+          llmApiKey = llmConfig.apiKey;
+          llmModel = llmConfig.model ?? undefined;
+        }
+      }
+
       try {
-        const response = await invokeLLM({ messages: llmMessages });
+        const response = await invokeLLM({ messages: llmMessages, apiKey: llmApiKey, model: llmModel });
         const assistantContent = typeof response.choices[0]?.message?.content === "string"
           ? response.choices[0].message.content
           : JSON.stringify(response.choices[0]?.message?.content ?? "");
 
         await createMessage({ agentId: input.agentId, userId: ctx.user.id, role: "assistant", content: assistantContent });
+
+        if (isDemo) {
+          await incrementDemoMessageCount(ctx.user.id);
+        }
 
         await createAuditLog({
           agentId: input.agentId, userId: ctx.user.id, action: "chat.message",
