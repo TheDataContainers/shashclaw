@@ -210,15 +210,12 @@ const normalizeToolChoice = (
 };
 
 const resolveApiUrl = () => {
-  if (!ENV.forgeApiUrl || ENV.forgeApiUrl.trim().length === 0) {
-    throw new Error("LLM API is not configured. Set BUILT_IN_FORGE_API_URL.");
-  }
-  return `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`;
+  return "https://api.anthropic.com/v1/messages";
 };
 
 const assertApiKey = () => {
-  if (!ENV.forgeApiKey) {
-    throw new Error("LLM API key is not configured. Set BUILT_IN_FORGE_API_KEY.");
+  if (!ENV.anthropicKey) {
+    throw new Error("Anthropic API key is not configured. Set ANTHROPIC_KEY.");
   }
 };
 
@@ -281,10 +278,23 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     response_format,
   } = params;
 
+  // Separate system message from other messages for Anthropic API
+  const systemMessage = messages.find(msg => msg.role === 'system');
+  const otherMessages = messages.filter(msg => msg.role !== 'system');
+
   const payload: Record<string, unknown> = {
-    model: "gemini-2.5-flash",
-    messages: messages.map(normalizeMessage),
+    model: "claude-sonnet-4-5",
+    messages: otherMessages.map(normalizeMessage),
+    max_tokens: 32768,
   };
+
+  // Add system message if present
+  if (systemMessage) {
+    const systemContent = ensureArray(systemMessage.content)
+      .map(part => (typeof part === "string" ? part : JSON.stringify(part)))
+      .join("\n");
+    payload.system = systemContent;
+  }
 
   if (tools && tools.length > 0) {
     payload.tools = tools;
@@ -296,11 +306,6 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   );
   if (normalizedToolChoice) {
     payload.tool_choice = normalizedToolChoice;
-  }
-
-  payload.max_tokens = 32768
-  payload.thinking = {
-    "budget_tokens": 128
   }
 
   const normalizedResponseFormat = normalizeResponseFormat({
@@ -318,7 +323,8 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
+      "x-api-key": ENV.anthropicKey,
+      "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify(payload),
   });
@@ -330,5 +336,35 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     );
   }
 
-  return (await response.json()) as InvokeResult;
+  const anthropicResponse = await response.json();
+
+  // Convert Anthropic response format to OpenAI-compatible format
+  return {
+    id: anthropicResponse.id || `msg_${Date.now()}`,
+    created: Math.floor(Date.now() / 1000),
+    model: anthropicResponse.model || "claude-sonnet-4-5",
+    choices: [{
+      index: 0,
+      message: {
+        role: "assistant",
+        content: anthropicResponse.content?.[0]?.text || "",
+        tool_calls: anthropicResponse.content
+          ?.filter((item: any) => item.type === 'tool_use')
+          ?.map((toolUse: any) => ({
+            id: toolUse.id,
+            type: "function",
+            function: {
+              name: toolUse.name,
+              arguments: JSON.stringify(toolUse.input),
+            },
+          })),
+      },
+      finish_reason: anthropicResponse.stop_reason || "stop",
+    }],
+    usage: anthropicResponse.usage ? {
+      prompt_tokens: anthropicResponse.usage.input_tokens || 0,
+      completion_tokens: anthropicResponse.usage.output_tokens || 0,
+      total_tokens: (anthropicResponse.usage.input_tokens || 0) + (anthropicResponse.usage.output_tokens || 0),
+    } : undefined,
+  };
 }
