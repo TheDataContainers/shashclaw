@@ -1,15 +1,15 @@
+import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import dotenv from "dotenv";
-dotenv.config({ path: ".env.local" });
-dotenv.config();
 import express from "express";
 import { createServer } from "http";
 import net from "net";
-import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "./oauth";
 import { registerCustomAuthRoutes } from "../customAuth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+import { registerOAuthRoutes } from "./oauth";
 import { serveStatic, setupVite } from "./vite";
+dotenv.config({ path: ".env.local" });
+dotenv.config();
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {

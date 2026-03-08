@@ -282,7 +282,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   } = params;
 
   const payload: Record<string, unknown> = {
-    model: "claude-3-5-sonnet-20241022",
+    model: "gemini-2.5-flash",
     messages: messages.map(normalizeMessage),
   };
 
