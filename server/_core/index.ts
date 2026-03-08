@@ -40,6 +40,11 @@ async function startServer() {
   registerOAuthRoutes(app);
   // Custom authentication routes (bypasses Manus OAuth portal redirect URI validation)
   registerCustomAuthRoutes(app);
+  // Health check endpoint (must be before Vite wildcard route)
+  app.get("/api/health", (_req, res) => {
+    res.status(200).json({ ok: true });
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",
