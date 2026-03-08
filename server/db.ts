@@ -35,7 +35,6 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   if (!db) { console.warn("[Database] Cannot upsert user: database not available"); return; }
   try {
     const values: InsertUser = { openId: user.openId };
-    const updateSet: Record<string, unknown> = {};
     const textFields = ["name", "email", "loginMethod"] as const;
     type TextField = (typeof textFields)[number];
     const assignNullable = (field: TextField) => {
@@ -43,15 +42,29 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       if (value === undefined) return;
       const normalized = value ?? null;
       values[field] = normalized;
-      updateSet[field] = normalized;
     };
     textFields.forEach(assignNullable);
-    if (user.lastSignedIn !== undefined) { values.lastSignedIn = user.lastSignedIn; updateSet.lastSignedIn = user.lastSignedIn; }
-    if (user.role !== undefined) { values.role = user.role; updateSet.role = user.role; }
-    else if (user.openId === ENV.ownerOpenId) { values.role = 'admin'; updateSet.role = 'admin'; }
+    if (user.lastSignedIn !== undefined) { values.lastSignedIn = user.lastSignedIn; }
+    if (user.role !== undefined) { values.role = user.role; }
+    else if (user.openId === ENV.ownerOpenId) { values.role = 'admin'; }
     if (!values.lastSignedIn) { values.lastSignedIn = new Date(); }
-    if (Object.keys(updateSet).length === 0) { updateSet.lastSignedIn = new Date(); }
-    await db.insert(users).values(values).onConflict((oc) => oc.column(users.openId).doUpdateSet(updateSet));
+
+    // Try insert, if fails due to duplicate, update instead
+    try {
+      await db.insert(users).values(values);
+    } catch (insertError) {
+      // Assume conflict - update existing user
+      const updateValues: Record<string, unknown> = {};
+      if (values.name !== undefined) updateValues.name = values.name;
+      if (values.email !== undefined) updateValues.email = values.email;
+      if (values.loginMethod !== undefined) updateValues.loginMethod = values.loginMethod;
+      if (values.lastSignedIn) updateValues.lastSignedIn = values.lastSignedIn;
+      if (values.role) updateValues.role = values.role;
+
+      if (Object.keys(updateValues).length > 0) {
+        await db.update(users).set(updateValues).where(eq(users.openId, user.openId));
+      }
+    }
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
