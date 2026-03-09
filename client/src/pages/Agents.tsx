@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Bot, Plus, Play, Square, Trash2, Search, MessageSquare } from "lucide-react";
@@ -20,6 +21,9 @@ export default function Agents() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
+  const [llmConfigId, setLlmConfigId] = useState<string>("default");
+
+  const { data: llmConfigs } = trpc.llm.list.useQuery();
 
   const createMutation = trpc.agent.create.useMutation({
     onSuccess: () => {
@@ -29,6 +33,7 @@ export default function Agents() {
       setName("");
       setDescription("");
       setSystemPrompt("");
+      setLlmConfigId("default");
       toast.success("Agent created");
     },
     onError: (e) => toast.error(e.message),
@@ -81,10 +86,29 @@ export default function Agents() {
                 <Label>System Prompt</Label>
                 <Textarea value={systemPrompt} onChange={e => setSystemPrompt(e.target.value)} placeholder="You are a helpful assistant..." rows={4} />
               </div>
+              <div className="space-y-2">
+                <Label>LLM Config</Label>
+                <Select value={llmConfigId} onValueChange={setLlmConfigId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Default (Claude Sonnet)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Default (Claude Sonnet)</SelectItem>
+                    {llmConfigs?.map(c => (
+                      <SelectItem key={c.id} value={`config:${c.id}`}>
+                        {c.name} — {c.model}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <Button
                 className="w-full"
                 disabled={!name.trim() || createMutation.isPending}
-                onClick={() => createMutation.mutate({ name, description, systemPrompt })}
+                onClick={() => createMutation.mutate({
+                  name, description, systemPrompt,
+                  llmProvider: llmConfigId === "default" ? undefined : llmConfigId
+                })}
               >
                 {createMutation.isPending ? "Creating..." : "Create Agent"}
               </Button>

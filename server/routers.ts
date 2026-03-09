@@ -216,7 +216,18 @@ const chatRouter = router({
       if (isDemo) {
         llmModel = "claude-haiku-4-5-20251001";
       } else {
-        const llmConfig = await getUserDefaultLLMConfig(ctx.user.id);
+        // Check if agent has a specific LLM config assigned
+        let llmConfig = null;
+        if (agent.llmProvider?.startsWith("config:")) {
+          const configId = parseInt(agent.llmProvider.slice(7), 10);
+          if (!isNaN(configId)) {
+            llmConfig = await getLLMConfig(configId, ctx.user.id);
+          }
+        }
+        // Fall back to user's default config
+        if (!llmConfig) {
+          llmConfig = await getUserDefaultLLMConfig(ctx.user.id);
+        }
         if (llmConfig?.apiKey) {
           llmApiKey = llmConfig.apiKey;
           llmModel = llmConfig.model ?? undefined;
