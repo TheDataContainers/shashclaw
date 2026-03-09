@@ -157,17 +157,14 @@ export default function AgentDetail({ id }: { id: number }) {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {agentSkills.map(({ agentSkill, skill }) => (
-                    <div key={agentSkill.id} className="flex items-center justify-between p-3 rounded-lg border">
+                  {agentSkills.map((as) => (
+                    <div key={as.id} className="flex items-center justify-between p-3 rounded-lg border">
                       <div className="flex items-center gap-3">
                         <Puzzle className="h-4 w-4 text-primary" />
-                        <div>
-                          <p className="text-sm font-medium">{skill.name}</p>
-                          <p className="text-xs text-muted-foreground">{skill.description || "No description"}</p>
-                        </div>
+                        <p className="text-sm font-medium">Skill #{as.skillId}</p>
                       </div>
-                      <span className={`text-xs px-2 py-0.5 rounded ${agentSkill.enabled ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"}`}>
-                        {agentSkill.enabled ? "Active" : "Disabled"}
+                      <span className={`text-xs px-2 py-0.5 rounded ${as.enabled ? "bg-emerald-500/10 text-emerald-500" : "bg-muted text-muted-foreground"}`}>
+                        {as.enabled ? "Active" : "Disabled"}
                       </span>
                     </div>
                   ))}

@@ -271,7 +271,7 @@ const auditRouter = router({
       category: z.string().optional(),
       limit: z.number().optional(),
     }).optional())
-    .query(({ input }) => getAuditLogs(input)),
+    .query(({ input, ctx }) => getAuditLogs(ctx.user.id, input?.limit)),
 });
 
 // ── Task Router ────────────────────────────────────────────────────────
