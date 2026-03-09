@@ -47,6 +47,9 @@ vi.mock("./db", () => ({
   getDashboardStats: vi.fn().mockResolvedValue({ totalAgents: 2, runningAgents: 1, totalSkills: 5, totalTasks: 3, recentLogs: 10 }),
   upsertUser: vi.fn().mockResolvedValue(undefined),
   getUserByOpenId: vi.fn().mockResolvedValue(undefined),
+  getUserDefaultLLMConfig: vi.fn().mockResolvedValue(null),
+  incrementDemoMessageCount: vi.fn().mockResolvedValue(undefined),
+  getLLMConfigs: vi.fn().mockResolvedValue([]),
 }));
 
 // Mock storage

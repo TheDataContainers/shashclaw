@@ -19,7 +19,7 @@ export const ENV = {
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   // Production readiness flags
-  singleUserMode: process.env.SINGLE_USER_MODE === 'true' || process.env.NODE_ENV !== 'production',
+  singleUserMode: process.env.SINGLE_USER_MODE === 'true' || (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test'),
   killSwitchEnabled: process.env.KILL_SWITCH_ENABLED === 'true',
   ownerId: process.env.OWNER_ID,
 };
