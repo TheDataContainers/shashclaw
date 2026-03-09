@@ -13,6 +13,7 @@ export default function CustomLogin() {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<"email" | "verify">("email");
   const [tempToken, setTempToken] = useState("");
+  const [emailSent, setEmailSent] = useState(false);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,9 +35,10 @@ export default function CustomLogin() {
       }
 
       const data = await response.json();
-      setTempToken(data.tempToken);
+      setEmailSent(data.emailSent);
+      if (!data.emailSent && data.tempToken) setTempToken(data.tempToken);
       setStep("verify");
-      toast.success("Verification token generated");
+      toast.success(data.emailSent ? "Check your email for a login link" : "Verification token generated");
     } catch (error) {
       toast.error("Failed to send login link");
       console.error(error);
@@ -100,9 +102,11 @@ export default function CustomLogin() {
           </div>
           <CardTitle>Sign In</CardTitle>
           <CardDescription>
-            {step === "email" 
-              ? "Enter your email to get started" 
-              : "Enter the verification token sent to your email"}
+            {step === "email"
+              ? "Enter your email to get started"
+              : emailSent
+                ? "Check your inbox — click the link to sign in automatically, or paste the token below if redirected"
+                : "Your access token is shown below — click Verify to continue"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -150,15 +154,18 @@ export default function CustomLogin() {
                 </div>
               </div>
 
-              <Button 
-                type="button" 
-                variant="outline" 
-                className="w-full gap-2"
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full flex-col h-auto py-3 gap-1"
                 onClick={handleDemoLogin}
                 disabled={loading}
               >
-                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                Try Demo Account
+                <span className="flex items-center gap-2">
+                  {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Try Demo Account
+                </span>
+                <span className="text-xs font-normal text-muted-foreground">5 free AI prompts · no signup required</span>
               </Button>
             </form>
           ) : (
@@ -172,6 +179,9 @@ export default function CustomLogin() {
                 <label htmlFor="token" className="text-sm font-medium">
                   Verification Token
                 </label>
+                {!emailSent && (
+                  <div className="bg-muted rounded-lg p-3 font-mono text-xs break-all select-all">{tempToken}</div>
+                )}
                 <Input
                   id="token"
                   type="text"
@@ -193,6 +203,7 @@ export default function CustomLogin() {
                 onClick={() => {
                   setStep("email");
                   setTempToken("");
+                  setEmailSent(false);
                 }}
                 disabled={loading}
               >

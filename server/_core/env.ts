@@ -14,6 +14,8 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   anthropicKey: process.env.ANTHROPIC_KEY ?? "",
   ownerEmail: (process.env.OWNER_EMAIL ?? "").toLowerCase(),
+  resendApiKey: process.env.RESEND_API_KEY ?? "",
+  resendFromEmail: process.env.RESEND_FROM_EMAIL ?? "noreply@shashclaw.app",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   // Production readiness flags

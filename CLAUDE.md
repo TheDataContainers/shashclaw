@@ -1,10 +1,5 @@
 ---
-description: 
-alwaysApply: true
----
-
----
-description: 
+description:
 alwaysApply: true
 ---
 You are working on Shashclaw - a self-hosted AI agent platform.

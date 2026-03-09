@@ -242,8 +242,8 @@ export default function Chat({ agentId }: { agentId?: number }) {
           emptyStateMessage={`Start a conversation with ${selectedAgent?.name || "your agent"}`}
           suggestedPrompts={[
             "What can you help me with?",
-            "List your available skills",
-            "Run a quick system check",
+            "Summarize the latest AI news",
+            "Write a Python script to rename files",
           ]}
         />
       )}
