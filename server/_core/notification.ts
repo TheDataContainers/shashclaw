@@ -58,7 +58,7 @@ const validatePayload = (input: NotificationPayload): NotificationPayload => {
 };
 
 /**
- * Dispatches a project-owner notification through the Manus Notification Service.
+ * Dispatches a project-owner notification through the configured notification service.
  * Returns `true` if the request was accepted, `false` when the upstream service
  * cannot be reached (callers can fall back to email/slack). Validation errors
  * bubble up as TRPC errors so callers can fix the payload.
@@ -69,19 +69,19 @@ export async function notifyOwner(
   const { title, content } = validatePayload(payload);
 
   // Notification service is optional - return false if not configured
-  if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
-    console.warn("[Notification] Service not configured (BUILT_IN_FORGE_API_URL or BUILT_IN_FORGE_API_KEY missing)");
+  if (!ENV.storageApiUrl || !ENV.storageApiKey) {
+    console.warn("[Notification] Service not configured (STORAGE_API_URL or STORAGE_API_KEY missing)");
     return false;
   }
 
-  const endpoint = buildEndpointUrl(ENV.forgeApiUrl);
+  const endpoint = buildEndpointUrl(ENV.storageApiUrl);
 
   try {
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         accept: "application/json",
-        authorization: `Bearer ${ENV.forgeApiKey}`,
+        authorization: `Bearer ${ENV.storageApiKey}`,
         "content-type": "application/json",
         "connect-protocol-version": "1",
       },

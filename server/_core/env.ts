@@ -16,8 +16,8 @@ export const ENV = {
   ownerEmail: (process.env.OWNER_EMAIL ?? "").toLowerCase(),
   resendApiKey: process.env.RESEND_API_KEY ?? "",
   resendFromEmail: process.env.RESEND_FROM_EMAIL ?? "noreply@shashclaw.app",
-  forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
-  forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  storageApiUrl: process.env.STORAGE_API_URL ?? "",
+  storageApiKey: process.env.STORAGE_API_KEY ?? "",
   // Production readiness flags
   singleUserMode: process.env.SINGLE_USER_MODE === 'true' || (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test'),
   killSwitchEnabled: process.env.KILL_SWITCH_ENABLED === 'true',
