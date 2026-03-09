@@ -14,7 +14,7 @@ export default function Dashboard() {
   const statCards = [
     { label: "Total Agents", value: stats?.totalAgents ?? 0, icon: Bot, color: "text-blue-500", path: "/agents" },
     { label: "Running", value: stats?.runningAgents ?? 0, icon: Activity, color: "text-emerald-500", path: "/agents" },
-    { label: "Skills Available", value: stats?.totalSkills ?? 0, icon: Puzzle, color: "text-violet-500", path: "/skills" },
+    { label: "Skills Available", value: stats?.totalSkills ?? 0, icon: Puzzle, color: "text-violet-500", path: "/config" },
     { label: "Scheduled Tasks", value: stats?.totalTasks ?? 0, icon: Clock, color: "text-amber-500", path: "/tasks" },
   ];
 
@@ -66,9 +66,13 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {!agents || agents.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground text-sm">
-                <Bot className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                No agents yet. Create your first agent.
+              <div className="text-center py-10 text-muted-foreground">
+                <Bot className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                <p className="text-sm font-medium text-foreground">Create your first agent</p>
+                <p className="text-xs mt-1 mb-4">Agents are AI assistants you can chat with, give tools, and automate tasks.</p>
+                <Button size="sm" onClick={() => setLocation("/agents")}>
+                  Get started →
+                </Button>
               </div>
             ) : (
               <div className="space-y-2">
