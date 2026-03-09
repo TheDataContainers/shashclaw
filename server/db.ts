@@ -1,5 +1,5 @@
 import { eq, and, sql, desc, gt } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { drizzle } from "drizzle-orm/node-postgres";
 import {
   InsertUser, users,
   agents, InsertAgent, Agent,
@@ -11,6 +11,7 @@ import {
   agentFiles, InsertAgentFile,
   integrations, InsertIntegration,
   usageEvals, InsertUsageEval,
+  llmConfigs,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -18,12 +19,17 @@ let _db: ReturnType<typeof drizzle> | null = null;
 
 export async function getDb() {
   if (!_db && ENV.databaseUrl) {
+    console.log("[DB DEBUG] Attempting to connect to database...");
+    console.log("[DB DEBUG] Database URL length:", ENV.databaseUrl.length);
     try {
       _db = drizzle(ENV.databaseUrl);
+      console.log("[DB DEBUG] Database connection created successfully");
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      console.warn("[DB DEBUG] Failed to connect:", error);
       _db = null;
     }
+  } else if (!ENV.databaseUrl) {
+    console.log("[DB DEBUG] No database URL configured");
   }
   return _db;
 }
@@ -35,7 +41,6 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   if (!db) { console.warn("[Database] Cannot upsert user: database not available"); return; }
   try {
     const values: InsertUser = { openId: user.openId };
-    const updateSet: Record<string, unknown> = {};
     const textFields = ["name", "email", "loginMethod"] as const;
     type TextField = (typeof textFields)[number];
     const assignNullable = (field: TextField) => {
@@ -43,15 +48,29 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       if (value === undefined) return;
       const normalized = value ?? null;
       values[field] = normalized;
-      updateSet[field] = normalized;
     };
     textFields.forEach(assignNullable);
-    if (user.lastSignedIn !== undefined) { values.lastSignedIn = user.lastSignedIn; updateSet.lastSignedIn = user.lastSignedIn; }
-    if (user.role !== undefined) { values.role = user.role; updateSet.role = user.role; }
-    else if (user.openId === ENV.ownerOpenId) { values.role = 'admin'; updateSet.role = 'admin'; }
+    if (user.lastSignedIn !== undefined) { values.lastSignedIn = user.lastSignedIn; }
+    if (user.role !== undefined) { values.role = user.role; }
+    else if (user.openId === ENV.ownerOpenId) { values.role = 'admin'; }
     if (!values.lastSignedIn) { values.lastSignedIn = new Date(); }
-    if (Object.keys(updateSet).length === 0) { updateSet.lastSignedIn = new Date(); }
-    await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+
+    // Try insert, if fails due to duplicate, update instead
+    try {
+      await db.insert(users).values(values);
+    } catch (insertError) {
+      // Assume conflict - update existing user
+      const updateValues: Record<string, unknown> = {};
+      if (values.name !== undefined) updateValues.name = values.name;
+      if (values.email !== undefined) updateValues.email = values.email;
+      if (values.loginMethod !== undefined) updateValues.loginMethod = values.loginMethod;
+      if (values.lastSignedIn) updateValues.lastSignedIn = values.lastSignedIn;
+      if (values.role) updateValues.role = values.role;
+
+      if (Object.keys(updateValues).length > 0) {
+        await db.update(users).set(updateValues).where(eq(users.openId, user.openId));
+      }
+    }
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
@@ -69,7 +88,7 @@ export async function getUserByOpenId(openId: string) {
 export async function createAgent(data: InsertAgent) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(agents).values(data);
+  const [result] = await db.insert(agents).values(data).returning();
   return result;
 }
 
@@ -115,7 +134,7 @@ export async function getSkillById(id: number) {
 export async function createSkill(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(skills).values(data);
+  const [result] = await db.insert(skills).values(data).returning();
   return result;
 }
 
@@ -135,7 +154,7 @@ export async function getAgentSkills(agentId: number) {
 export async function installSkillToAgent(data: InsertAgentSkill) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(agentSkills).values(data);
+  const [result] = await db.insert(agentSkills).values(data).returning();
   return result;
 }
 
@@ -155,7 +174,7 @@ export async function getMessagesByAgent(agentId: number, limit: number = 50) {
 export async function createMessage(data: InsertMessage) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(messages).values(data);
+  const [result] = await db.insert(messages).values(data).returning();
   return result;
 }
 
@@ -169,7 +188,7 @@ export async function getAuditLogs(userId: number, limit: number = 100) {
 export async function createAuditLog(data: InsertAuditLog) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(auditLogs).values(data);
+  const [result] = await db.insert(auditLogs).values(data).returning();
   return result;
 }
 
@@ -190,7 +209,7 @@ export async function getScheduledTaskById(id: number) {
 export async function createScheduledTask(data: InsertScheduledTask) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(scheduledTasks).values(data);
+  const [result] = await db.insert(scheduledTasks).values(data).returning();
   return result;
 }
 
@@ -216,7 +235,7 @@ export async function getAgentFiles(agentId: number) {
 export async function createAgentFile(data: InsertAgentFile) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(agentFiles).values(data);
+  const [result] = await db.insert(agentFiles).values(data).returning();
   return result;
 }
 
@@ -236,7 +255,7 @@ export async function getIntegrations(userId: number) {
 export async function createIntegration(data: InsertIntegration) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(integrations).values(data);
+  const [result] = await db.insert(integrations).values(data).returning();
   return result;
 }
 
@@ -275,7 +294,7 @@ export async function getDashboardStats(userId: number) {
 export async function createUsageEval(data: InsertUsageEval) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(usageEvals).values(data);
+  const [result] = await db.insert(usageEvals).values(data).returning();
   return result;
 }
 
@@ -331,16 +350,32 @@ export async function getPMAnalyticsQuery(userId: number, days: number = 7) {
 export async function getAgentsToKill(userId: number, errorThreshold: number = 20, responseTimeThreshold: number = 30000) {
   const db = await getDb();
   if (!db) return [];
-  
+
   const userAgents = await db.select().from(agents).where(eq(agents.userId, userId));
   const candidates = [];
-  
+
   for (const agent of userAgents) {
     const stats = await getAgentEvalStats(agent.id, 7);
     if (stats.errorRate > errorThreshold || (stats.avgCompletion && stats.avgCompletion < 50)) {
       candidates.push({ agent, stats });
     }
   }
-  
+
   return candidates;
+}
+
+// ── LLM Config Helpers ─────────────────────────────────────────────────────
+export async function getUserDefaultLLMConfig(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(llmConfigs).where(and(eq(llmConfigs.userId, userId), eq(llmConfigs.isDefault, true))).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function incrementDemoMessageCount(userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({
+    demoMessageCount: sql`${users.demoMessageCount} + 1`,
+  }).where(eq(users.id, userId));
 }

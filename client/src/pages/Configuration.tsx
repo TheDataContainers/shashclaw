@@ -114,7 +114,7 @@ export default function Configuration() {
       toast.success("Configuration deleted");
       refetch();
     } catch (error: any) {
-      toast.toast.error(error.message || "Failed to delete configuration");
+      toast.error(error.message || "Failed to delete configuration");
     }
   };
 

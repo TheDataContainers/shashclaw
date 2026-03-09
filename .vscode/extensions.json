@@ -1,0 +1,27 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-vscode.vscode-typescript-next",
+    "ms-vscode.cpptools-extension-pack",
+    "github.copilot",
+    "github.copilot-chat",
+    "ms-vscode.makefile-tools",
+    "Vue.volar",
+    "ms-vscode.js-debug",
+    "ms-vscode.js-debug-nightly",
+    "streetsidesoftware.code-spell-checker",
+    "ms-azuretools.vscode-docker",
+    "ms-kubernetes-tools.vscode-kubernetes-tools",
+    "ms-vscode-remote.remote-containers",
+    "ms-vscode-remote.remote-ssh",
+    "ms-vscode-remote.remote-wsl",
+    "NuclleaR.vscode-nunjucks",
+    "PKief.material-icon-theme",
+    "teabyii.ayu",
+    "eamodio.gitlens",
+    "vivaxy.vscode-conventional-commits",
+    "mhutchie.git-graph",
+    "GitLab.gitlab-workflow"
+  ]
+}

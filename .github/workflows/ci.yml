@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build
+        run: pnpm build
+
+      - name: Type check
+        run: pnpm check
+
+      - name: Test
+        run: pnpm test --run
+
+      - name: Check for stale Manus/Forge references
+        run: |
+          if grep -rn "manus\.im\|forge\.butterfly\|ManusDialog\|BUILT_IN_FORGE" \
+            --include="*.ts" --include="*.tsx" \
+            --exclude-dir=node_modules --exclude-dir=dist .; then
+            echo "❌ Stale Manus/Forge references found — remove before merging to main"
+            exit 1
+          fi
+          echo "✅ No stale references found"

@@ -1,6 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Shield, Bot, Lock, Activity, Puzzle, Clock, ArrowRight } from "lucide-react";
+import { Shield, Bot, Activity, Clock, ArrowRight, Key, FileText } from "lucide-react";
 import { useLocation } from "wouter";
 
 export default function Home() {
@@ -34,7 +34,7 @@ export default function Home() {
       <section className="py-24 md:py-32">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary text-sm font-medium mb-6">
-            <Lock className="h-3.5 w-3.5" />
+            <Shield className="h-3.5 w-3.5" />
             Secure by Design
           </div>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight mb-6">
@@ -78,12 +78,12 @@ export default function Home() {
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              { icon: Bot, title: "Multi-Agent Support", desc: "Deploy multiple agents with isolated workspaces, persistent memory, and per-agent configuration." },
-              { icon: Lock, title: "Container Isolation", desc: "Each agent runs in a sandboxed environment with explicit directory mounting and permission controls." },
-              { icon: Activity, title: "Real-time Monitoring", desc: "Live dashboard with WebSocket updates, audit logs, and execution progress tracking." },
-              { icon: Puzzle, title: "Skill Management", desc: "Install, configure, and manage agent skills with sandboxed execution and security vetting." },
-              { icon: Clock, title: "Scheduled Tasks", desc: "Automate agent jobs with cron expressions, interval-based scheduling, and one-time execution." },
-              { icon: Shield, title: "Security First", desc: "OAuth integrations, scoped permissions, comprehensive audit trails, and owner notifications." },
+              { icon: Bot, title: "Multiple Agents", desc: "Create as many agents as you need, each with its own name, system prompt, and LLM configuration." },
+              { icon: Key, title: "Bring Your Own Key", desc: "Connect your Anthropic API key — your usage, your cost. Or try 5 free prompts on the demo tier." },
+              { icon: Activity, title: "Streaming Chat", desc: "Token-by-token responses via SSE. No frozen UI waiting for the full response to arrive." },
+              { icon: Clock, title: "Scheduled Tasks", desc: "Create and manage recurring agent tasks with cron expressions and interval-based scheduling." },
+              { icon: FileText, title: "Audit Logs", desc: "Every action logged with timestamps, categories, and severity. Full history of agent activity." },
+              { icon: Shield, title: "Single-User Mode", desc: "Lock your instance to your email only. JWT session auth with secure cookie handling." },
             ].map((feature, i) => (
               <div key={i} className="group rounded-xl border border-border/50 bg-card p-6 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all">
                 <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
