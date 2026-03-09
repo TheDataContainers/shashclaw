@@ -370,3 +370,72 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     } : undefined,
   };
 }
+
+export async function* streamInvokeLLM(params: InvokeParams): AsyncGenerator<string> {
+  if (!params.apiKey) assertApiKey();
+
+  const { messages, model } = params;
+
+  const systemMessage = messages.find(msg => msg.role === 'system');
+  const otherMessages = messages.filter(msg => msg.role !== 'system');
+
+  const payload: Record<string, unknown> = {
+    model: model ?? "claude-sonnet-4-5-20250929",
+    messages: otherMessages.map(normalizeMessage),
+    max_tokens: 32768,
+    stream: true,
+  };
+
+  if (systemMessage) {
+    const systemContent = ensureArray(systemMessage.content)
+      .map(part => (typeof part === "string" ? part : JSON.stringify(part)))
+      .join("\n");
+    payload.system = systemContent;
+  }
+
+  const response = await fetch(resolveApiUrl(), {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": params.apiKey ?? ENV.anthropicKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`LLM stream failed: ${response.status} ${response.statusText} – ${errorText}`);
+  }
+
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const data = line.slice(6).trim();
+        if (!data || data === "[DONE]") continue;
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.type === "content_block_delta" && parsed.delta?.type === "text_delta" && parsed.delta.text) {
+            yield parsed.delta.text;
+          }
+        } catch {
+          // skip malformed events
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}

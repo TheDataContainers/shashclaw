@@ -64,6 +64,7 @@ export default function Chat({ agentId }: { agentId?: number }) {
 
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
   const [limitReached, setLimitReached] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
 
   const isDemo = user?.role === "demo" || user?.openId?.startsWith("demo:");
   const promptsRemaining = isDemo
@@ -88,29 +89,92 @@ export default function Chat({ agentId }: { agentId?: number }) {
     }
   }, [agentId, agents]);
 
-  const sendMutation = trpc.chat.send.useMutation({
-    onSuccess: (response) => {
-      setLocalMessages(prev => [...prev, { role: response.role, content: response.content }]);
-      if (isDemo) utils.auth.me.invalidate();
-    },
-    onError: (error) => {
-      if (error.message === "DEMO_LIMIT_REACHED") {
-        setLimitReached(true);
-        setLocalMessages(prev => [...prev, {
-          role: "assistant",
-          content: "You've reached the 5-prompt demo limit. Add your Anthropic API key in **LLM Config** to continue.",
-        }]);
-      } else {
-        setLocalMessages(prev => [...prev, { role: "assistant", content: `Error: ${error.message}` }]);
-      }
-    },
-  });
-
-  const handleSend = (content: string) => {
+  const handleSend = async (content: string) => {
     if (!selectedAgentId) return;
     if (isDemo && (promptsRemaining === 0 || limitReached)) return;
+
     setLocalMessages(prev => [...prev, { role: "user", content }]);
-    sendMutation.mutate({ agentId: selectedAgentId, content });
+    setIsStreaming(true);
+    // placeholder for streaming response
+    setLocalMessages(prev => [...prev, { role: "assistant", content: "" }]);
+
+    let accumulated = "";
+    try {
+      const response = await fetch("/api/chat/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agentId: selectedAgentId, content }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: "Request failed" }));
+        if (err.error === "DEMO_LIMIT_REACHED") {
+          setLimitReached(true);
+          setLocalMessages(prev => {
+            const updated = [...prev];
+            updated[updated.length - 1] = { role: "assistant", content: "You've reached the 5-prompt demo limit. Add your Anthropic API key in **LLM Config** to continue." };
+            return updated;
+          });
+        } else {
+          setLocalMessages(prev => {
+            const updated = [...prev];
+            updated[updated.length - 1] = { role: "assistant", content: `Error: ${err.error || "Unknown error"}` };
+            return updated;
+          });
+        }
+        return;
+      }
+
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6).trim();
+          if (data === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.error) {
+              setLocalMessages(prev => {
+                const updated = [...prev];
+                updated[updated.length - 1] = { role: "assistant", content: `Error: ${parsed.error}` };
+                return updated;
+              });
+              return;
+            }
+            if (parsed.text) {
+              accumulated += parsed.text;
+              setLocalMessages(prev => {
+                const updated = [...prev];
+                updated[updated.length - 1] = { role: "assistant", content: accumulated };
+                return updated;
+              });
+            }
+          } catch {
+            // skip malformed events
+          }
+        }
+      }
+
+      if (isDemo) utils.auth.me.invalidate();
+    } catch {
+      setLocalMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { role: "assistant", content: "Error: Connection failed" };
+        return updated;
+      });
+    } finally {
+      setIsStreaming(false);
+    }
   };
 
   const isInputDisabled = isDemo && (promptsRemaining === 0 || limitReached);
@@ -172,7 +236,7 @@ export default function Chat({ agentId }: { agentId?: number }) {
         <AIChatBox
           messages={localMessages}
           onSendMessage={handleSend}
-          isLoading={sendMutation.isPending}
+          isLoading={isStreaming}
           placeholder={isInputDisabled ? "Demo limit reached — add your API key to continue" : `Message ${selectedAgent?.name || "agent"}...`}
           height="calc(100vh - 12rem)"
           emptyStateMessage={`Start a conversation with ${selectedAgent?.name || "your agent"}`}

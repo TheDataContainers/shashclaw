@@ -2,6 +2,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import { registerChatStreamRoute } from "../chatStream";
 import { registerCustomAuthRoutes } from "../customAuth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
@@ -37,6 +38,7 @@ async function startServer() {
   registerOAuthRoutes(app);
   // Custom authentication routes (bypasses Manus OAuth portal redirect URI validation)
   registerCustomAuthRoutes(app);
+  registerChatStreamRoute(app);
   // Health check endpoint (must be before Vite wildcard route)
   app.get("/api/health", (_req, res) => {
     res.status(200).json({ ok: true });
