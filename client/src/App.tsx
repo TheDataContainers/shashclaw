@@ -5,6 +5,7 @@ import { Route, Switch, Redirect } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import DashboardLayout from "./components/DashboardLayout";
+import { PostHogProvider } from "./components/PostHogProvider";
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import Agents from "./pages/Agents";
@@ -53,6 +54,7 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
+          <PostHogProvider />
           <Toaster />
           <Router />
         </TooltipProvider>
