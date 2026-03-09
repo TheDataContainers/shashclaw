@@ -34,7 +34,7 @@ export default function Home() {
       <section className="py-24 md:py-32">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary text-sm font-medium mb-6">
-            <Lock className="h-3.5 w-3.5" />
+            <Shield className="h-3.5 w-3.5" />
             Secure by Design
           </div>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight mb-6">
